@@ -35,7 +35,7 @@
 *.i*86
 *.x86_64
 *.hex
-.vscode/
+
 # Debug files
 *.dSYM/
 *.su
@@ -46,6 +46,7 @@
 *.mod*
 *.cmd
 .tmp_versions/
+.vscode/
 modules.order
 Module.symvers
 Mkfile.old
