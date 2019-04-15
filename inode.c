@@ -9,12 +9,13 @@
 //     int refs; // reference count
 //     int mode; // permission & type
 //     int size; // bytes
-//     int ptrs[2]; // direct pointers
+//     int ptrs[DIRECT_PTRS]; // direct pointers
 //     int iptr; // single indirect pointer
+//     time_t ctime; // created time
+//     time_t mtime; // modified time
 // } inode;
 
 // TODO
-// void print_inode(inode* node);
 // inode* get_inode(int inum);
 // int alloc_inode();
 // void free_inode();
@@ -22,51 +23,52 @@
 // int shrink_inode(inode* node, int size);
 // int inode_get_pnum(inode* node, int fpn);
 
+
 // This only gets called when a node is first created
-void inode_init(inode* node, int mode)
+void init_inode(inode* node, int mode)
 {
-    printf("inode_init(node, %o)\n", mode);
+    printf("init_inode(node, %o)\n", mode);
 
     // update metadata
     node->refs = 1;
     node->mode = mode;
     node->ctime = time(NULL);
     node->mtime = time(NULL);
-    node->indirect_pum = 0;
+    node->iptr = 0;
     node->size = 0; // nothing written yet
 
-    for (int ii = 0; ii < NUM_BLOCKS; ii++) {
-        node->data[ii] = 0;
+    for (int ii = 0; ii < DIRECT_PTRS; ii++) {
+        node->ptrs[ii] = 0;
     }
 }
 
 // There might be an issue if we have all blocks filled up TODO
-void inode_set_data(inode* node, int pnum, int data_size){ 
-    printf("inode_set_data(node, %d, %d\n", pnum, data_size);
-    for (int ii = 0; ii < NUM_BLOCKS; ii++ ) {
-        if (node->data[ii] == 0) {
-            node->data[ii] = pnum;
+void inode_set_ptrs(inode* node, int pnum, int data_size){ 
+    printf("inode_set_ptrs(node, %d, %d\n", pnum, data_size);
+    for (int ii = 0; ii < DIRECT_PTRS; ii++ ) {
+        if (node->ptrs[ii] == 0) {
+            node->ptrs[ii] = pnum;
             break;
         }
     }
 
     node->size += data_size;
-    printf("inode_set_data, now node size is %d\n", node->size);
+    printf("inode_set_ptrs, now node size is %d\n", node->size);
 }
 
-int inode_write(inode* node, const char* buf, size_t bytes, off_t offset) {
-    printf("inode_write(%s, %ld, %ld)\n", buf, bytes, offset);
+int inode_write_helper(inode* node, const char* buf, size_t bytes, off_t offset) {
+    printf("inode_write_helper(%s, %ld, %ld)\n", buf, bytes, offset);
     // TODO: Worry about big stuff
     if (bytes > BLOCK_SIZE) {
         return -1;
     }
 
-    printf("node->data[0] = %d\n", node->data[0]);
-    if (node->data[0] == 0) {
+    printf("node->ptrs[0] = %d\n", node->ptrs[0]);
+    if (node->ptrs[0] == 0) {
         return -1;
     }
 
-    memcpy(pages_get_page(node->data[0]), buf, bytes);
+    memcpy(pages_get_page(node->ptrs[0]), buf, bytes);
 
     node->size = bytes; // TODO: prolly add offset
     node->mtime = time(NULL);

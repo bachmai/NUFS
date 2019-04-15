@@ -29,8 +29,8 @@ void directory_init()
     inode *root_node = pages_get_node(root_dir);
     if (root_node->refs == 0)
     {
-        inode_init(root_node, 040755);
-        inode_set_data(root_node, 2, BLOCK_SIZE);
+        init_inode(root_node, 040755);
+        inode_set_ptrs(root_node, 2, BLOCK_SIZE);
     }
     printf("directory_init()\n");
 }
@@ -152,9 +152,9 @@ directory get_dir_inum(int inum)
     inode *node = pages_get_node(inum);
     print_node(node);
 
-    dirent *entries = (dirent *)pages_get_page(node->data[0]);
+    dirent *entries = (dirent *)pages_get_page(node->ptrs[0]);
     directory dir;
-    dir.pnum = node->data[0];
+    dir.pnum = node->ptrs[0];
     dir.dirents = entries;
     dir.node = node;
 

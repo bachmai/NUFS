@@ -104,8 +104,8 @@ get_data(const char* path)
         return 0;
     }
 
-    for (int ii = 0; ii < NUM_BLOCKS; ++ii) {
-        int pnum = node->data[ii];
+    for (int ii = 0; ii < DIRECT_PTRS; ++ii) {
+        int pnum = node->ptrs[ii];
         if (pnum == 0) {
             return 0;
         }
@@ -170,8 +170,8 @@ storage_mknod(const char* path, mode_t mode)
     assert(node_idx > 1); // root is at inode 1
 
     inode* node = pages_get_node(node_idx);
-    inode_init(node, mode);
-    inode_set_data(node, pnum, 0); // no data stored yet
+    init_inode(node, mode);
+    inode_set_ptrs(node, pnum, 0); // no data stored yet
 
     // Update the metadata
     sb->data_map[pnum] = true;
@@ -208,8 +208,8 @@ storage_mkdir(const char* path, mode_t mode)
     inode* node = &(sb->inodes[inode_num]);
     mode_t dir_mode = (mode |= 040000);
     printf("dir_mode: %o\n", dir_mode);
-    inode_init(node, dir_mode);
-    inode_set_data(node, pnum, BLOCK_SIZE);
+    init_inode(node, dir_mode);
+    inode_set_ptrs(node, pnum, BLOCK_SIZE);
 
     // update the metadata
     sb->inode_map[inode_num] = true;  // this is used
@@ -282,11 +282,11 @@ storage_unlink(const char* path)
 
     // if there are no more references, clear all the links
     if (--(node->refs) == 0) {
-        for (int ii = 0; ii < NUM_BLOCKS; ++ii) {
-            int pnum = node->data[ii];
+        for (int ii = 0; ii < DIRECT_PTRS; ++ii) {
+            int pnum = node->ptrs[ii];
             if (pnum > 2) { // pages 2 and below are vital
                 sb->data_map[pnum] = false;
-                node->data[ii] = 0;
+                node->ptrs[ii] = 0;
             }
         }
         node->size = 0;
@@ -306,11 +306,11 @@ storage_rmdir(const char* path)
 
     inode* node = &(sb->inodes[inum]);
     if (--(node->refs) == 0) {
-        for (int ii = 0; ii < NUM_BLOCKS; ++ii) {
-            int pnum = node->data[ii];
+        for (int ii = 0; ii < DIRECT_PTRS; ++ii) {
+            int pnum = node->ptrs[ii];
             if (pnum > 2) { // pages 2 and below are vital
                 sb->data_map[pnum] = false;
-                node->data[ii] = 0;
+                node->ptrs[ii] = 0;
             }
         }
         node->size = 0;
@@ -408,7 +408,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     inode* node = &(sb->inodes[inum]);
     print_node(node);
 
-    return inode_write(node, buf, size, offset);
+    return inode_write_helper(node, buf, size, offset);
 }
 
 int 
