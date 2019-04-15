@@ -5,13 +5,13 @@
 #include "pages.h"
 
 typedef struct super_block {
-    bool data_map[PAGE_COUNT]; // Each byte = true or false
-    bool inode_map[PAGE_COUNT]; // Each byte = 1 inode, almost certainly fewer than pages
-    inode* inodes;
-    void* data_start;
-    int num_inodes;
-    int num_free_pages; // This might be removed later
+    bool inodes_map[PAGE_COUNT];
+    bool db_map[PAGE_COUNT];
+    inode* inodes_start;
+    int inodes_num;
+    void* db_start;
+    int db_free_num;
     int root_inode;
-} SBlock;
+} sp_block;
 
 #endif

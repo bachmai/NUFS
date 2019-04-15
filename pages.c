@@ -22,7 +22,7 @@
 static int pages_fd = -1;
 static void *pages_base = 0;
 
-static SBlock *sb;
+static sp_block *s_block;
 
 // Superblock : pg 0
 // inodes : pg 1
@@ -40,15 +40,15 @@ void pages_init(const char *path)
     pages_base = mmap(0, NUFS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, pages_fd, 0);
     assert(pages_base != MAP_FAILED);
 
-    sb = (SBlock *)pages_base;
+    s_block = (sp_block *)pages_base;
 
     // init the superblock
-    sb->inodes = (inode *)pages_get_page(1);
-    sb->num_inodes = PAGE_SIZE / sizeof(inode);
-    sb->data_start = pages_get_page(2);  
-    sb->num_free_pages = PAGE_COUNT - 2;
-    sb->inode_map[0] = 1;
-    sb->data_map[0] = 1;
+    s_block->inodes_start = (inode *)pages_get_page(1);
+    s_block->inodes_num = PAGE_SIZE / sizeof(inode);
+    s_block->db_start = pages_get_page(2);  
+    s_block->db_free_num = PAGE_COUNT - 2;
+    s_block->inodes_map[0] = 1;
+    s_block->db_map[0] = 1;
 
     printf("pages_init(%s) -> done\n", path);
 }
@@ -57,9 +57,9 @@ inode *
 pages_get_node(int inum)
 {
     printf("pages_get_node(%d)\n", inum);
-    if (inum < sb->num_inodes)
+    if (inum < s_block->inodes_num)
     {
-        inode *node = &(sb->inodes[inum]);
+        inode *node = &(s_block->inodes_start[inum]);
         printf("pages_get_node(%d)\n -> success", inum);
         return node;
     }
@@ -71,7 +71,7 @@ int pages_get_empty_pg()
     int rv = -1;
     for (int ii = 2; ii < PAGE_COUNT; ++ii)
     {
-        if (sb->data_map[ii] == 0)
+        if (s_block->db_map[ii] == 0)
         {
             rv = ii;
             break;

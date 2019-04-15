@@ -15,19 +15,19 @@
 #include "inode.h"
 #include "superblock.h"
 
-static SBlock *sb = NULL;
+static sp_block *s_block = NULL;
 
 void storage_init(const char *path)
 {
     pages_init(path);
 
-    sb = (SBlock *)pages_get_page(0);
-    sb->root_inode = 1;
-    sb->inode_map[1] = true;
+    s_block = (sp_block *)pages_get_page(0);
+    s_block->root_inode = 1;
+    s_block->inodes_map[1] = true;
 
     // init root directory
     directory_init();
-    sb->data_map[2] = true;
+    s_block->db_map[2] = true;
 }
 
 static inode *
@@ -42,7 +42,7 @@ get_node_from_path(const char *path)
 
     printf("get_node_from_path(%s) -> %d\n", path, inum);
 
-    return &(sb->inodes[inum]);
+    return &(s_block->inodes_start[inum]);
 }
 
 int storage_stat(const char *path, struct stat *st)
@@ -68,14 +68,14 @@ int storage_stat(const char *path, struct stat *st)
 
 int get_empty_node()
 {
-    if (sb == NULL)
+    if (s_block == NULL)
     {
         return -1;
     }
 
     for (int ii = 2; ii < PAGE_COUNT; ii++)
     {
-        if (!sb->inode_map[ii])
+        if (!s_block->inodes_map[ii])
         {
             return ii;
         }
@@ -165,9 +165,9 @@ int storage_mknod(const char *path, mode_t mode)
     inode_set_ptrs(node, pnum, 0); // no data stored yet
 
     // Update the metadata
-    sb->data_map[pnum] = true;
-    sb->inode_map[node_idx] = true;
-    sb->inodes[node_idx] = *(node);
+    s_block->db_map[pnum] = true;
+    s_block->inodes_map[node_idx] = true;
+    s_block->inodes_start[node_idx] = *(node);
 
     // add file to parent directory
     return directory_put(dir, base_name, node_idx);
@@ -195,15 +195,15 @@ int storage_mkdir(const char *path, mode_t mode)
     assert(inode_num > 0);
 
     // initialize data
-    inode *node = &(sb->inodes[inode_num]);
+    inode *node = &(s_block->inodes_start[inode_num]);
     mode_t dir_mode = (mode |= 040000);
     printf("dir_mode: %o\n", dir_mode);
     init_inode(node, dir_mode);
     inode_set_ptrs(node, pnum, PAGE_SIZE);
 
     // update the metadata
-    sb->inode_map[inode_num] = true; // this is used
-    sb->data_map[pnum] = true;
+    s_block->inodes_map[inode_num] = true; // this is used
+    s_block->db_map[pnum] = true;
 
     // add directory to parent
     return directory_put(dir, name, inode_num);
@@ -219,7 +219,7 @@ int storage_link(const char *from, const char *to)
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
 
     char *tmp1 = alloca(strlen(to));
     char *tmp2 = alloca(strlen(to));
@@ -269,9 +269,9 @@ int storage_unlink(const char *path)
         return -1;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
 
-    printf("storage_unlink: sb->inodes[inum].refs = %d\n", node->refs);
+    printf("storage_unlink: s_block->inodes[inum].refs = %d\n", node->refs);
 
     // if there are no more references, clear all the links
     if (--(node->refs) == 0)
@@ -281,12 +281,12 @@ int storage_unlink(const char *path)
             int pnum = node->ptrs[ii];
             if (pnum > 2)
             { // pages 2 and below are vital
-                sb->data_map[pnum] = false;
+                s_block->db_map[pnum] = false;
                 node->ptrs[ii] = 0;
             }
         }
         node->size = 0;
-        sb->inode_map[inum] = false;
+        s_block->inodes_map[inum] = false;
     }
     return 0;
 }
@@ -301,7 +301,7 @@ int storage_rmdir(const char *path)
     if (inum == 0)
         return -1;
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
     if (--(node->refs) == 0)
     {
         for (int ii = 0; ii < DIRECT_PTRS; ++ii)
@@ -309,12 +309,12 @@ int storage_rmdir(const char *path)
             int pnum = node->ptrs[ii];
             if (pnum > 2)
             { // pages 2 and below are vital
-                sb->data_map[pnum] = false;
+                s_block->db_map[pnum] = false;
                 node->ptrs[ii] = 0;
             }
         }
         node->size = 0;
-        sb->inode_map[inum] = false;
+        s_block->inodes_map[inum] = false;
     }
     return 0;
 }
@@ -338,7 +338,7 @@ int storage_chmod(const char *path, mode_t mode)
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
     node->mode = mode;
 
     return 0;
@@ -358,7 +358,7 @@ int storage_truncate(const char *path, off_t size)
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
     node->size = size;
 
     // TODO: zero out the bytes when expanding a file if you have debris
@@ -382,7 +382,7 @@ int storage_read(const char *path, char *buf, size_t size, off_t offset)
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
 
     // TODO loop and get info from node
     int pnum = 0; // FIXME this is a hack to get 'make' to work
@@ -408,7 +408,7 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset)
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
     print_node(node);
 
     return inode_write_helper(node, buf, size, offset);
@@ -422,7 +422,7 @@ int storage_set_time(const char *path, const struct timespec ts[2])
         return inum;
     }
 
-    inode *node = &(sb->inodes[inum]);
+    inode *node = &(s_block->inodes_start[inum]);
     node->ctime = ts[0].tv_sec;
     node->mtime = ts[1].tv_sec;
 
