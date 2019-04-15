@@ -1,6 +1,8 @@
 TODO:
 1. big file > 4k
 2. inode_Set_ptrs can't handle case when no more available pages
+3. storage_data. get the data from all the pages, not just the first one
 FIXME:
 1. DIRECT_PTRS in inode can't handle 10 direct pointers
 [IMPT] 2. change fields of superblock
+3. storage_stat return -ENOENT instead of -1 causes errors
