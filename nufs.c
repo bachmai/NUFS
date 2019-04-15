@@ -48,7 +48,7 @@ nufs_getattr(const char *path, struct stat *st)
     // printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
     // return rv;
     printf("getattr(%s)\n", path);
-    int rv = get_stat(path, st);
+    int rv = storage_stat(path, st);
     printf("getattr(%s) -> %d\n", path, rv);
     
     if (rv == -1) {
@@ -180,7 +180,7 @@ nufs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_fi
     // printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
     // return rv;
     printf("read(%s, %ld bytes, @%ld)\n", path, size, offset);
-    const char* data = get_data(path);
+    const char* data = storage_data(path);
 
     if (data == 0) {
         return 0;
@@ -208,7 +208,7 @@ nufs_write(const char *path, const char *buf, size_t size, off_t offset, struct 
 int
 nufs_utimens(const char* path, const struct timespec ts[2])
 {
-    int rv = storage_utimens(path, ts);
+    int rv = storage_set_time(path, ts);
     printf("utimens(%s, [%ld, %ld; %ld %ld]) -> %d\n",
            path, ts[0].tv_sec, ts[0].tv_nsec, ts[1].tv_sec, ts[1].tv_nsec, rv);
 	return rv;

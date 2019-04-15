@@ -15,12 +15,10 @@
 #include "inode.h"
 #include "superblock.h"
 
-// #define NUFS_SIZE 1024 * 1024 // 1 MB
-
 static SBlock* sb = NULL;
 
 int 
-get_free_inode() {
+get_empty_node() {
     if (sb == NULL) {
         return -1;
     }
@@ -52,11 +50,11 @@ storage_init(const char* path)
 }
 
 static inode*
-lookup_inode(const char* path) 
+get_node_from_path(const char* path) 
 {
-    printf("lookup_inode(%s)\n", path);
+    printf("get_node_from_path(%s)\n", path);
     int inum = tree_lookup(path);
-    printf("lookup_inode(%s) -> %d\n", path, inum);
+    printf("get_node_from_path(%s) -> %d\n", path, inum);
 
     if (inum <= 0) {
         return NULL;
@@ -66,18 +64,10 @@ lookup_inode(const char* path)
 }
 
 int
-check_access(const char* path, int mask)
+storage_stat(const char* path, struct stat* st)
 {
-    printf("check_access(%s, %d)", path, mask);
-    inode* node = lookup_inode(path);
-    printf("check_access node %o\n", node->mode);
-}
-
-int
-get_stat(const char* path, struct stat* st)
-{
-    printf("get_stat(%s)\n", path);
-    inode* node = lookup_inode(path);
+    printf("storage_stat(%s)\n", path);
+    inode* node = get_node_from_path(path);
     print_node(node);
     if (!node) {
         return -1;
@@ -96,10 +86,10 @@ get_stat(const char* path, struct stat* st)
 }
 
 const char*
-get_data(const char* path)
+storage_data(const char* path)
 {
-    printf("get_data(%s)\n", path);
-    inode* node = lookup_inode(path);
+    printf("storage_data(%s)\n", path);
+    inode* node = get_node_from_path(path);
     if (!node) {
         return 0;
     }
@@ -113,7 +103,7 @@ get_data(const char* path)
         // TODO get the data from all the pages, not just the
         // first one
         const char* data = (const char*) pages_get_page(pnum);
-        printf("get_data(%s) -> %s\n", path, data);
+        printf("storage_data(%s) -> %s\n", path, data);
         return data;
     }
 }
@@ -133,7 +123,7 @@ storage_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
             strcpy(full_path, path);
             strcat(full_path, name);
 
-            get_stat(full_path, &st);
+            storage_stat(full_path, &st);
             filler(buf, name, &st, 0); 
         }
     }
@@ -166,7 +156,7 @@ storage_mknod(const char* path, mode_t mode)
     int pnum = pages_get_empty_pg();
     assert(pnum > 2); // root is at page 2
 
-    int node_idx = get_free_inode();
+    int node_idx = get_empty_node();
     assert(node_idx > 1); // root is at inode 1
 
     inode* node = pages_get_node(node_idx);
@@ -201,7 +191,7 @@ storage_mkdir(const char* path, mode_t mode)
     assert(pnum > 0);
 
     // create inode
-    int inode_num = get_free_inode();
+    int inode_num = get_empty_node();
     assert(inode_num > 0);
 
     // initialize data
@@ -412,7 +402,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 }
 
 int 
-storage_utimens(const char* path, const struct timespec ts[2])
+storage_set_time(const char* path, const struct timespec ts[2])
 {
     int inum = tree_lookup(path);
     if (inum <= 0) {
