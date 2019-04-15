@@ -127,8 +127,8 @@ storage_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
     struct stat st;
     char full_path[256];
 
-    for (int ii = 0; ii < DIR_SIZE; ++ii) {
-        char* name = dir.ents[ii].name;
+    for (int ii = 0; ii < DIR_LIMIT; ++ii) {
+        char* name = dir.dirents[ii].name;
         if (name[0] != 0) {
             strcpy(full_path, path);
             strcat(full_path, name);
