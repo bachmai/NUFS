@@ -14,7 +14,7 @@
 
 
 void   pages_init(const char* path);
-inode* pages_get_node(int node_id);
+inode* pages_get_node(int inum);
 int    pages_get_empty_pg();
 void   print_node(inode* node);
 void* pages_get_page(int pnum);

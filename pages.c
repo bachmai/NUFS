@@ -24,9 +24,13 @@ static void *pages_base = 0;
 
 static SBlock *sb;
 
+// Superblock : pg 0
+// inodes : pg 1
+// pages : pg 2
+
 void pages_init(const char *path)
 {
-    printf("pages_init(%s)\n", path);
+    
     pages_fd = open(path, O_CREAT | O_RDWR, 0644);
     assert(pages_fd != -1);
 
@@ -38,62 +42,48 @@ void pages_init(const char *path)
 
     sb = (SBlock *)pages_base;
 
-    //Initialize Data and INode maps
-    for (int i = 0; i < PAGE_COUNT; i++)
-    {
-        sb->data_map[i] = false;
-        sb->inode_map[i] = false;
-    }
-
-    // Initialize Other fields
-    sb->inodes = (inode *)pages_get_page(1); // Inodes are in block 1
-    sb->data_start = pages_get_page(2);      // Data starts at block 2
+    // init the superblock
+    sb->inodes = (inode *)pages_get_page(1);
     sb->num_inodes = PAGE_SIZE / sizeof(inode);
-    sb->num_free_pages = PAGE_COUNT - 2; // Minus root and inode section
+    sb->data_start = pages_get_page(2);  
+    sb->num_free_pages = PAGE_COUNT - 2;
+    sb->inode_map[0] = 1;
+    sb->data_map[0] = 1;
 
-    // Node 0 is just going to be NULL I guess
-    sb->inode_map[0] = true;
-    sb->data_map[0] = true;
-    printf("end pages_init(%s)\n", path);
+    printf("pages_init(%s) -> done\n", path);
 }
 
 inode *
-pages_get_node(int node_id)
+pages_get_node(int inum)
 {
-    printf("pages_get_node(%d)\n", node_id);
-    if (node_id < sb->num_inodes)
+    printf("pages_get_node(%d)\n", inum);
+    if (inum < sb->num_inodes)
     {
-        inode *idx = &(sb->inodes[node_id]);
-        return idx;
+        inode *node = &(sb->inodes[inum]);
+        printf("pages_get_node(%d)\n -> success", inum);
+        return node;
     }
-    return NULL; // invalid node
+    return 0;
 }
 
 int pages_get_empty_pg()
 {
+    int rv = -1;
     for (int ii = 2; ii < PAGE_COUNT; ++ii)
     {
-        if (sb->data_map[ii] == false)
-        { // if page is empty
-            printf("pages_get_empty_pg() -> %d\n", ii);
-            return ii;
+        if (sb->data_map[ii] == 0)
+        {
+            rv = ii;
+            break;
         }
     }
-    printf("pages_get_empty_pg() -> %d\n", -1);
-    return -1;
+    printf("pages_get_empty_pg() -> %d\n", rv);
+    return rv;
 }
 
 void print_node(inode *node)
 {
-    if (node)
-    {
-        printf("node{refs: %d, mode: %04o, size: %d}\n",
-               node->refs, node->mode, node->size);
-    }
-    else
-    {
-        printf("node{null}\n");
-    }
+    print_inode(node);
 }
 
 void pages_free()
