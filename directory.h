@@ -15,7 +15,7 @@ typedef struct dirent
 {
     char name[DIR_NAME];
     int inum;
-    // char _reserved[12];  // what to do with this?
+    char _reserved[12];  // what to do with this?
 } dirent;
 
 typedef struct directory
