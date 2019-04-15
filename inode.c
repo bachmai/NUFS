@@ -23,64 +23,65 @@
 // int shrink_inode(inode* node, int size);
 // int inode_get_pnum(inode* node, int fpn);
 
-
-// This only gets called when a node is first created
-void init_inode(inode* node, int mode)
+void init_inode(inode *node, int mode)
 {
-    printf("init_inode(node, %o)\n", mode);
-
-    // update metadata
     node->refs = 1;
     node->mode = mode;
-    node->ctime = time(NULL);
-    node->mtime = time(NULL);
-    node->iptr = 0;
-    node->size = 0; // nothing written yet
-
-    for (int ii = 0; ii < DIRECT_PTRS; ii++) {
+    for (int ii = 0; ii < DIRECT_PTRS; ii++)
+    {
         node->ptrs[ii] = 0;
     }
+    node->iptr = 0;
+    node->size = 0;
+    node->ctime = time(NULL); // set time to current
+    node->mtime = time(NULL);
+    printf("init_inode(node, %o)\n", mode);
 }
 
-// There might be an issue if we have all blocks filled up TODO
-void inode_set_ptrs(inode* node, int pnum, int data_size){ 
-    printf("inode_set_ptrs(node, %d, %d\n", pnum, data_size);
-    for (int ii = 0; ii < DIRECT_PTRS; ii++ ) {
-        if (node->ptrs[ii] == 0) {
+void inode_set_ptrs(inode *node, int pnum, int data_size)
+{
+
+    for (int ii = 0; ii < DIRECT_PTRS; ii++)
+    {
+        if (node->ptrs[ii] == 0)
+        {
             node->ptrs[ii] = pnum;
             break;
         }
     }
-
     node->size += data_size;
-    printf("inode_set_ptrs, now node size is %d\n", node->size);
+    printf("inode_set_ptrs(node, %d, %d)n", pnum, data_size);
 }
 
-int inode_write_helper(inode* node, const char* buf, size_t bytes, off_t offset) {
-    printf("inode_write_helper(%s, %ld, %ld)\n", buf, bytes, offset);
-    // TODO: Worry about big stuff
-    if (bytes > PAGE_SIZE) {
-        return -1;
-    }
+int inode_write_helper(inode *node, const char *buf, size_t bytes, off_t offset)
+{
+    int rv = -1;
 
-    printf("node->ptrs[0] = %d\n", node->ptrs[0]);
-    if (node->ptrs[0] == 0) {
-        return -1;
+    // TODO
+    if (bytes > PAGE_SIZE || node->ptrs[0] == 0)
+    {
+        printf("inode_write_helper(%s, %ld, %ld) -> %d\n", buf, bytes, offset, rv);
+        return rv;
     }
 
     memcpy(pages_get_page(node->ptrs[0]), buf, bytes);
-
-    node->size = bytes; // TODO: prolly add offset
     node->mtime = time(NULL);
+    node->size = bytes; // offset?
 
-    return bytes;
+    rv = bytes;
+    printf("inode_write_helper(%s, %ld, %ld) -> %d\n", buf, bytes, offset, rv);
+    return rv;
 }
 
-void print_inode(inode* node)
+void print_inode(inode *node)
 {
-    if (node) {
-        printf("inode{ refs: %d, mode: %o, size: %d}\n", node->refs, node->mode, node->size);
-    } else {
+    if (!node)
+    {
         printf("given node is null\n");
+    }
+    else
+    {
+        printf("print_inode -> {refs: %d, mode: %o, size: %d, ctime: %ld, mtime: %ld}\n",
+               node->refs, node->mode, node->size, node->ctime, node->mtime);
     }
 }

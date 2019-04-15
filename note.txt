@@ -1,0 +1,5 @@
+TODO:
+1. big file > 4k
+2. inode_Set_ptrs can't handle case when no more available pages
+FIXME:
+1. DIRECT_PTRS in inode can't handle 10 direct pointers
