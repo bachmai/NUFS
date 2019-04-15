@@ -55,7 +55,7 @@ static inode*
 lookup_inode(const char* path) 
 {
     printf("lookup_inode(%s)\n", path);
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     printf("lookup_inode(%s) -> %d\n", path, inum);
 
     if (inum <= 0) {
@@ -123,7 +123,7 @@ storage_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
         off_t offset) 
 {
     printf("storage_readdir(%s)\n", path);
-    directory dir = directory_from_path(path);
+    directory dir = get_dir_path(path);
     struct stat st;
     char full_path[256];
 
@@ -154,12 +154,12 @@ storage_mknod(const char* path, mode_t mode)
     char* name = basename(tmp2);
 
     printf("storage_mknod: dname(%s), name(%s)\n", dname, name);
-    directory dir = directory_from_path(dname);
+    directory dir = get_dir_path(dname);
     if (dir.node == 0) {
         return -ENOENT;
     }
-    printf("storage_mknod: done with directory_from_path\n");
-    if (directory_lookup_inum(dir, name) != -ENOENT) {
+    printf("storage_mknod: done with get_dir_path\n");
+    if (directory_lookup(dir, name) != -ENOENT) {
         return -EEXIST;
     }
 
@@ -179,7 +179,7 @@ storage_mknod(const char* path, mode_t mode)
     sb->inodes[node_idx] = *(node);
 
     // add file to parent directory
-    return directory_put_ent(dir, name, node_idx);
+    return directory_put(dir, name, node_idx);
 }
 
 int 
@@ -194,7 +194,7 @@ storage_mkdir(const char* path, mode_t mode)
     char* dname = dirname(tmp1);
     char* name = basename(tmp2);
 
-    directory dir = directory_from_path(tmp1);
+    directory dir = get_dir_path(tmp1);
     assert(dir.pnum > 0);
 
     int pnum = pages_find_empty();
@@ -216,7 +216,7 @@ storage_mkdir(const char* path, mode_t mode)
     sb->data_map[pnum] = true;
 
     // add directory to parent
-    return directory_put_ent(dir, name, inode_num);
+    return directory_put(dir, name, inode_num);
 }
 
 int 
@@ -224,7 +224,7 @@ storage_link(const char* from, const char* to)
 {
     printf("storage_link(%s, %s)\n", from, to);
 
-    int inum = tree_lookup_inum(from);
+    int inum = tree_lookup(from);
     if (inum <= 0) {
         return inum;
     }
@@ -239,12 +239,12 @@ storage_link(const char* from, const char* to)
     char* dname = dirname(tmp1);
     char* name = basename(tmp2);
 
-    directory to_parent = directory_from_path(dname);
+    directory to_parent = get_dir_path(dname);
     if (to_parent.pnum <= 0) {
         return to_parent.pnum;
     }
 
-    int linked = directory_put_ent(to_parent, (const char*) name, inum);
+    int linked = directory_put(to_parent, (const char*) name, inum);
     if (linked == 0) {
         node->refs += 1;
     }
@@ -265,13 +265,13 @@ storage_unlink(const char* path)
     char* dname = dirname(tmp1);
     char* name = basename(tmp2);
     
-    int parent_inum = tree_lookup_inum(dname);
+    int parent_inum = tree_lookup(dname);
     if (parent_inum <= 0) {
         return -1;
     }
 
-    directory parent_dir = directory_from_inum(parent_inum);
-    int inum = directory_delete_ent(parent_dir, (const char*) name);
+    directory parent_dir = get_dir_inum(parent_inum);
+    int inum = directory_delete(parent_dir, (const char*) name);
     if (inum <= 0) {
         return -1;
     }
@@ -300,7 +300,7 @@ storage_rmdir(const char* path)
 {
     // Return an error if the user tries to remove a non-empty directory
     // The error 'ENOTEMPTY' is probably the right one
-    int inum = delete_directory(path);
+    int inum = rm_dir(path);
     if (inum < 0) return inum; 
     if (inum == 0) return -1;
 
@@ -333,7 +333,7 @@ int
 storage_chmod(const char* path, mode_t mode)
 {
     printf("storage_chmod(%s, %o)\n", path, mode);
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     if (inum <= 0) {
         return inum;
     }
@@ -352,7 +352,7 @@ storage_truncate(const char* path, off_t size)
         return -1;
     }
 
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     if (inum <= 0) {
         return inum;
     }
@@ -375,7 +375,7 @@ storage_read(const char* path, char* buf, size_t size, off_t offset)
         return -1;
     }
 
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     if (inum <= 0) {
         return inum;
     }
@@ -400,7 +400,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         return -1;
     }
 
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     if (inum <= 0) {
         return inum;
     }
@@ -414,7 +414,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 int 
 storage_utimens(const char* path, const struct timespec ts[2])
 {
-    int inum = tree_lookup_inum(path);
+    int inum = tree_lookup(path);
     if (inum <= 0) {
         return inum;
     }
