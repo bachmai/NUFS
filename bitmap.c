@@ -1,5 +1,3 @@
-
-
 int bitmap_get(void* bm, int ii) 
 {
     return *((int*)bm + (ii/32)) & (1 << (ii%32));
