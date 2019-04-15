@@ -30,7 +30,7 @@ void directory_init()
     if (root_node->refs == 0)
     {
         init_inode(root_node, 040755);
-        inode_set_ptrs(root_node, 2, BLOCK_SIZE);
+        inode_set_ptrs(root_node, 2, PAGE_SIZE);
     }
     printf("directory_init()\n");
 }

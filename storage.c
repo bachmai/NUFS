@@ -25,7 +25,7 @@ get_free_inode() {
         return -1;
     }
 
-    for (int ii = 2; ii < NUM_PAGES; ii++) {
+    for (int ii = 2; ii < PAGE_COUNT; ii++) {
         if (!sb->inode_map[ii]) {
             return ii;
         }
@@ -163,7 +163,7 @@ storage_mknod(const char* path, mode_t mode)
         return -EEXIST;
     }
 
-    int pnum = pages_find_empty();
+    int pnum = pages_get_empty_pg();
     assert(pnum > 2); // root is at page 2
 
     int node_idx = get_free_inode();
@@ -197,7 +197,7 @@ storage_mkdir(const char* path, mode_t mode)
     directory dir = get_dir_path(tmp1);
     assert(dir.pnum > 0);
 
-    int pnum = pages_find_empty();
+    int pnum = pages_get_empty_pg();
     assert(pnum > 0);
 
     // create inode
@@ -209,7 +209,7 @@ storage_mkdir(const char* path, mode_t mode)
     mode_t dir_mode = (mode |= 040000);
     printf("dir_mode: %o\n", dir_mode);
     init_inode(node, dir_mode);
-    inode_set_ptrs(node, pnum, BLOCK_SIZE);
+    inode_set_ptrs(node, pnum, PAGE_SIZE);
 
     // update the metadata
     sb->inode_map[inode_num] = true;  // this is used
@@ -370,7 +370,7 @@ int
 storage_read(const char* path, char* buf, size_t size, off_t offset)
 {
     printf("storage_read(%s)\n", path);
-    if (offset + size > BLOCK_SIZE) {
+    if (offset + size > PAGE_SIZE) {
         // TODO: implement large files
         return -1;
     }
@@ -395,7 +395,7 @@ int
 storage_write(const char* path, const char* buf, size_t size, off_t offset)
 {
     printf("storage_write(%s)\n", path);
-    if (offset + size > BLOCK_SIZE) {
+    if (offset + size > PAGE_SIZE) {
         // TODO: implement large files
         return -1;
     }

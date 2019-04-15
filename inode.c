@@ -59,7 +59,7 @@ void inode_set_ptrs(inode* node, int pnum, int data_size){
 int inode_write_helper(inode* node, const char* buf, size_t bytes, off_t offset) {
     printf("inode_write_helper(%s, %ld, %ld)\n", buf, bytes, offset);
     // TODO: Worry about big stuff
-    if (bytes > BLOCK_SIZE) {
+    if (bytes > PAGE_SIZE) {
         return -1;
     }
 
