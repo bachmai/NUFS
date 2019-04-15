@@ -17,6 +17,7 @@
 #include "pages.h"
 #include "util.h"
 #include "bitmap.h"
+#include "superblock.h"
 
 const int PAGE_COUNT = 256;
 

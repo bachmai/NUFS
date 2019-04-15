@@ -13,6 +13,7 @@
 #include "storage.h"
 #include "util.h"
 #include "inode.h"
+#include "superblock.h"
 
 // #define NUFS_SIZE 1024 * 1024 // 1 MB
 
