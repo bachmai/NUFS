@@ -176,37 +176,36 @@ int storage_mknod(const char *path, mode_t mode)
 int storage_mkdir(const char *path, mode_t mode)
 {
     printf("storage_mkdir(%s, %o)\n", path, mode);
-    char *tmp1 = alloca(strlen(path));
-    char *tmp2 = alloca(strlen(path));
-    strcpy(tmp1, path);
-    strcpy(tmp2, path);
+    char *path1 = alloca(strlen(path));
+    char *path2 = alloca(strlen(path));
+    strcpy(path1, path);
+    strcpy(path2, path);
+    char *dir_name = dirname(path1);
+    char *base_name = basename(path2);
 
-    char *dname = dirname(tmp1);
-    char *name = basename(tmp2);
-
-    directory dir = get_dir_path(tmp1);
+    directory dir = get_dir_path(path1);
     assert(dir.pnum > 0);
 
     int pnum = pages_get_empty_pg();
     assert(pnum > 0);
 
     // create inode
-    int inode_num = get_empty_node();
-    assert(inode_num > 0);
+    int inum = get_empty_node();
+    assert(inum > 0);
 
     // initialize data
-    inode *node = &(s_block->inodes_start[inode_num]);
+    inode *node = &(s_block->inodes_start[inum]);
     mode_t dir_mode = (mode |= 040000);
     printf("dir_mode: %o\n", dir_mode);
     init_inode(node, dir_mode);
     inode_set_ptrs(node, pnum, PAGE_SIZE);
 
     // update the metadata
-    s_block->inodes_map[inode_num] = true; // this is used
+    s_block->inodes_map[inum] = true; // this is used
     s_block->db_map[pnum] = true;
 
     // add directory to parent
-    return directory_put(dir, name, inode_num);
+    return directory_put(dir, base_name, inum);
 }
 
 int storage_link(const char *from, const char *to)
@@ -221,21 +220,20 @@ int storage_link(const char *from, const char *to)
 
     inode *node = &(s_block->inodes_start[inum]);
 
-    char *tmp1 = alloca(strlen(to));
-    char *tmp2 = alloca(strlen(to));
-    strcpy(tmp1, to);
-    strcpy(tmp2, to);
+    char *path1 = alloca(strlen(to));
+    char *path2 = alloca(strlen(to));
+    strcpy(path1, to);
+    strcpy(path2, to);
+    char *dir_name = dirname(path1);
+    char *base_name = basename(path2);
 
-    char *dname = dirname(tmp1);
-    char *name = basename(tmp2);
-
-    directory to_parent = get_dir_path(dname);
+    directory to_parent = get_dir_path(dir_name);
     if (to_parent.pnum <= 0)
     {
         return to_parent.pnum;
     }
 
-    int linked = directory_put(to_parent, (const char *)name, inum);
+    int linked = directory_put(to_parent, (const char *)base_name, inum);
     if (linked == 0)
     {
         node->refs += 1;
@@ -248,22 +246,21 @@ int storage_unlink(const char *path)
 {
     printf("storage_unlink(%s)\n", path);
 
-    char *tmp1 = alloca(strlen(path));
-    char *tmp2 = alloca(strlen(path));
-    strcpy(tmp1, path);
-    strcpy(tmp2, path);
+    char *path1 = alloca(strlen(path));
+    char *path2 = alloca(strlen(path));
+    strcpy(path1, path);
+    strcpy(path2, path);
+    char *dir_name = dirname(path1);
+    char *base_name = basename(path2);
 
-    char *dname = dirname(tmp1);
-    char *name = basename(tmp2);
-
-    int parent_inum = tree_lookup(dname);
-    if (parent_inum <= 0)
+    int p_index = tree_lookup(dir_name);
+    if (p_index <= 0)
     {
         return -1;
     }
 
-    directory parent_dir = get_dir_inum(parent_inum);
-    int inum = directory_delete(parent_dir, (const char *)name);
+    directory p_dir = get_dir_inum(p_index);
+    int inum = directory_delete(p_dir, (const char *)base_name);
     if (inum <= 0)
     {
         return -1;
@@ -309,12 +306,12 @@ int storage_rmdir(const char *path)
             int pnum = node->ptrs[ii];
             if (pnum > 2)
             { // pages 2 and below are vital
-                s_block->db_map[pnum] = false;
+                s_block->db_map[pnum] = 0;
                 node->ptrs[ii] = 0;
             }
         }
         node->size = 0;
-        s_block->inodes_map[inum] = false;
+        s_block->inodes_map[inum] = 0;
     }
     return 0;
 }
