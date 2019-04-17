@@ -23,13 +23,14 @@ void storage_init(const char *path)
 
     s_block = (sp_block *)pages_get_page(0);
     s_block->root_inode = 1;
-    s_block->inodes_map[1] = true;
+    s_block->inodes_map[1] = 1;
 
     // init root directory
     directory_init();
-    s_block->db_map[2] = true; //
+    s_block->db_map[2] = 1; //
 }
 
+// returns the inode related to given path
 static inode *
 get_node_from_path(const char *path)
 {
@@ -63,6 +64,7 @@ int storage_stat(const char *path, struct stat *st)
     return 0;
 }
 
+// returns the first empty inode index
 int get_empty_node()
 {
     if (!s_block)
@@ -150,6 +152,7 @@ int storage_truncate(const char *path, off_t size)
 int storage_mknod(const char *path, mode_t mode)
 {
     printf("storage_mknod(%s, %o)\n", path, mode);
+    // work around
     char *path1 = alloca(strlen(path));
     char *path2 = alloca(strlen(path));
     strcpy(path1, path);
@@ -184,7 +187,6 @@ int storage_mknod(const char *path, mode_t mode)
     s_block->inodes_map[inum] = 1;
     s_block->inodes_start[inum] = *(node);
 
-    // add file to parent directory
     return directory_put(dir, base_name, inum);
 }
 
@@ -366,8 +368,8 @@ int storage_mkdir(const char *path, mode_t mode)
     inode_set_ptrs(node, pnum, PAGE_SIZE);
 
     // update superblock
-    s_block->inodes_map[inum] = true;
-    s_block->db_map[pnum] = true;
+    s_block->inodes_map[inum] = 1;
+    s_block->db_map[pnum] = 1;
 
     printf("storage_mkdir(%s, %o)\n", path, mode);
     return directory_put(dir, base_name, inum);

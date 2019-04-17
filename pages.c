@@ -56,11 +56,11 @@ void pages_init(const char *path)
 inode *
 pages_get_node(int inum)
 {
-    printf("pages_get_node(%d)\n", inum);
+    // printf("pages_get_node(%d)\n", inum);
     if (inum < s_block->inodes_num)
     {
         inode *node = &(s_block->inodes_start[inum]);
-        printf("pages_get_node(%d)\n -> success", inum);
+        printf("pages_get_node(%d)\n -> success\n", inum);
         return node;
     }
     return 0;
@@ -99,14 +99,12 @@ pages_get_page(int pnum)
     return pages_base + 4096 * pnum;
 }
 
-// Given but not use
 void *
 get_pages_bitmap()
 {
     return pages_get_page(0);
 }
 
-// Given but not used
 void *
 get_inode_bitmap()
 {
@@ -114,7 +112,6 @@ get_inode_bitmap()
     return (void *)(page + 32);
 }
 
-// given but not used
 int alloc_page()
 {
     void *pbm = get_pages_bitmap();
@@ -132,7 +129,6 @@ int alloc_page()
     return -1;
 }
 
-// given but not used
 void free_page(int pnum)
 {
     printf("+ free_page(%d)\n", pnum);
