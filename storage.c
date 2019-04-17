@@ -28,6 +28,7 @@ void storage_init(const char *path)
     // init root directory
     directory_init();
     s_block->db_map[2] = 1; //
+    printf("storage_init(%s)\n", path);
 }
 
 // returns the inode related to given path
@@ -41,14 +42,11 @@ get_node_from_path(const char *path)
         return NULL;
     }
 
-    printf("get_node_from_path(%s) -> %d\n", path, inum);
-
     return &(s_block->inodes_start[inum]);
 }
 
 int storage_stat(const char *path, struct stat *st)
-{
-    printf("storage_stat(%s)\n", path);
+{ 
     inode *node = get_node_from_path(path);
     print_node(node);
     if (!node)
@@ -61,6 +59,7 @@ int storage_stat(const char *path, struct stat *st)
     st->st_size = node->size;
     st->st_mtime = node->mtime;
 
+    printf("storage_stat(%s)\n", path);
     return 0;
 }
 
@@ -151,8 +150,7 @@ int storage_truncate(const char *path, off_t size)
 
 int storage_mknod(const char *path, mode_t mode)
 {
-    printf("storage_mknod(%s, %o)\n", path, mode);
-    // work around
+    // work around - got this from stackOverflow
     char *path1 = alloca(strlen(path));
     char *path2 = alloca(strlen(path));
     strcpy(path1, path);
@@ -160,13 +158,11 @@ int storage_mknod(const char *path, mode_t mode)
     char *dir_name = dirname(path1);
     char *base_name = basename(path2);
 
-    printf("storage_mknod: dir_name(%s), name(%s)\n", dir_name, base_name);
     directory dir = get_dir_path(dir_name);
     if (dir.node == 0)
     {
         return -ENOENT;
     }
-    printf("storage_mknod: done with get_dir_path\n");
     if (directory_lookup(dir, base_name) != -ENOENT)
     {
         return -EEXIST;
@@ -187,6 +183,7 @@ int storage_mknod(const char *path, mode_t mode)
     s_block->inodes_map[inum] = 1;
     s_block->inodes_start[inum] = *(node);
 
+    printf("storage_mknod(%s, %o)\n", path, mode);
     return directory_put(dir, base_name, inum);
 }
 
