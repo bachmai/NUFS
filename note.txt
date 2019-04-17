@@ -2,6 +2,15 @@ TODO:
 1. big file > 4k
 2. inode_Set_ptrs can't handle case when no more available pages
 3. storage_data. get the data from all the pages, not just the first one
+4. storage_truncate
+    TODO: zero out the bytes when expanding a file if you have debris
+    left from shrinking
+5. storage_read read big file
+6. storage_write read big file
 FIXME:
 1. DIRECT_PTRS in inode can't handle 10 direct pointers
 3. storage_stat return -ENOENT instead of -1 causes errors
+
+CHECK:
+1. storage_unlink, storage_rmdir
+    (--(node->refs) == 0) -> (node->refs == 1)
