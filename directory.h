@@ -4,7 +4,7 @@
 #define DIRECTORY_H
 
 #define DIR_NAME 36
-#define DIR_LIMIT 64   // 8inodes x 8db
+#define DIR_LIMIT 64 // 8inodes x 8db
 
 #include "slist.h"
 #include "pages.h"
@@ -20,7 +20,7 @@ typedef struct directory
 {
     int pnum;
     dirent *dirents; // array of dirents
-    inode *node;     // pointer to inode     
+    inode *node;     // pointer to inode
 } directory;
 
 void directory_init();

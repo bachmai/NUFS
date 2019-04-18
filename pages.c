@@ -20,7 +20,7 @@
 #include "superblock.h"
 
 static int pages_fd = -1;
-static void* pages_base = 0;
+static void *pages_base = 0;
 
 static sp_block *s_block; // Our superblock
 
@@ -52,7 +52,7 @@ inode *
 pages_get_node(int inum)
 {
     // printf("pages_get_node(%d)\n", inum);
-    inode *rv = 0;  // empty
+    inode *rv = 0; // empty
     if (inum < s_block->inodes_num)
     {
         inode *node = &(s_block->inodes_start[inum]);

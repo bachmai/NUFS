@@ -37,11 +37,11 @@ void init_inode(inode *node, int mode)
 
 // Get the pnum of empty datablock pointed by inode
 // --> no more pages ?
-int 
-get_mt_db(inode *node) {
+int get_mt_db(inode *node)
+{
     for (int ii = 0; ii < DIRECT_PTRS; ++ii)
     {
-        if (node->ptrs[ii] == 0)    // empty
+        if (node->ptrs[ii] == 0) // empty
         {
             return ii;
         }
@@ -50,7 +50,7 @@ get_mt_db(inode *node) {
     return -1;
 }
 
-inode* 
+inode *
 get_inode(int inum)
 {
     return pages_get_node(inum);

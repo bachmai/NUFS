@@ -65,17 +65,18 @@ int directory_lookup(directory dd, const char *name)
 }
 
 // helper to find dirent that matches the name
-dirent*
-find_dirent_name(directory dd, const char* name)
+dirent *
+find_dirent_name(directory dd, const char *name)
 {
     int ii = 0;
     while (ii < DIR_LIMIT && !streq(dd.dirents[ii].name, name))
     {
-        // Until reach limit 
+        // Until reach limit
         ++ii;
     }
 
-    if (ii == DIR_LIMIT) {
+    if (ii == DIR_LIMIT)
+    {
         return NULL; // not found, but caller should check before call
     }
 
@@ -85,28 +86,30 @@ find_dirent_name(directory dd, const char* name)
 int tree_lookup(const char *path)
 {
     int rv = 1;
-    
-    directory dd = get_dir_inum(1); // get root directory
+
+    directory dd = get_dir_inum(1);     // get root directory
     slist *dirs = directory_list(path); // dirs slist
     dirs = dirs->next;
-    dirent* dirent;
+    dirent *dirent;
     // Loop through slist dirs checking if path is in the root directory dir by dir
-    while (dirs != 0) {
+    while (dirs != 0)
+    {
         printf("current dir->data in dirs list is %s\n", dirs->data);
         dirent = find_dirent_name(dd, dirs->data);
-        if (dirent) 
+        if (dirent)
         {
             // NOT NULL
             rv = dirent->inum;
             // change directory --> next one
-            inode* node = pages_get_node(rv);   // get the inode
-            if (node->mode & 040000) { // Bitwise is used to check for the type of file -->> directory in this case
+            inode *node = pages_get_node(rv); // get the inode
+            if (node->mode & 040000)
+            { // Bitwise is used to check for the type of file -->> directory in this case
                 dd = get_dir_inum(rv);
             }
             // keep traversing
             dirs = dirs->next;
         }
-        else 
+        else
         {
             // NULLl -> not found
             rv = -ENOENT;
@@ -119,11 +122,11 @@ int tree_lookup(const char *path)
 }
 
 // index of free inode
-int 
-find_inum_mt(dirent* dirents) 
+int find_inum_mt(dirent *dirents)
 {
     int rv = 0;
-    while (rv < DIR_LIMIT && dirents[rv].inum != 0){
+    while (rv < DIR_LIMIT && dirents[rv].inum != 0)
+    {
         // Inside the limits and not empty
         ++rv;
     }
@@ -135,7 +138,8 @@ int directory_put(directory dd, const char *name, int inum)
     int rv = -1;
 
     int idx = find_inum_mt(&dd.dirents[0]);
-    if (idx < DIR_LIMIT) {
+    if (idx < DIR_LIMIT)
+    {
         dd.dirents[idx].inum = inum;
         strcpy(dd.dirents[idx].name, name);
         rv = 0; //success
@@ -151,7 +155,7 @@ int directory_delete(directory dd, const char *name)
     // ensure there is such dir
     if (rv != -ENOENT)
     {
-        dirent* entry = find_dirent_name(dd, name);
+        dirent *entry = find_dirent_name(dd, name);
         rv = entry->inum;
         // clear mapping
         entry->name[0] = 0;
@@ -178,7 +182,7 @@ directory get_dir_inum(int inum)
     rv.pnum = pnum;
     rv.dirents = (dirent *)pages_get_page(pnum);
     rv.node = node;
-    
+
     printf("get_dir_inum(%d)\n", inum);
     return rv;
 }
@@ -205,10 +209,10 @@ int rm_dir(const char *path)
         printf("rm_dir(%s) -> %d\n", path, rv);
         return rv;
     }
-    directory p_dir = get_dir_path(par_dir);    // directory
+    directory p_dir = get_dir_path(par_dir); // directory
     char path2[strlen(path)];
     strcpy(path2, path);
-    char *cur_dir = basename(path2);    // current dirr
+    char *cur_dir = basename(path2); // current dirr
     if (tree_lookup(cur_dir) <= 0)
     {
         //printf("ME");
@@ -216,7 +220,7 @@ int rm_dir(const char *path)
         return rv;
     }
     // dirent *c_ent = find_
-    dirent *c_ent = find_dirent_name(p_dir,cur_dir);
+    dirent *c_ent = find_dirent_name(p_dir, cur_dir);
     rv = c_ent->inum;
 
     directory c_dir = get_dir_path(cur_dir);
@@ -225,11 +229,11 @@ int rm_dir(const char *path)
     {
         if (c_dir.dirents[ii].inum != 0 && !streq(c_dir.dirents[ii].name, 0))
         {
-            rv = -ENOTEMPTY;  // not empty --> cannot delete
+            rv = -ENOTEMPTY; // not empty --> cannot delete
             break;
         }
     }
-    
+
     printf("rm_dir(%s) -> %d\n", path, rv);
     return rv;
 }

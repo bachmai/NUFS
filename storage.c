@@ -19,8 +19,8 @@ static sp_block *s_block = NULL;
 
 void storage_init(const char *path)
 {
-    pages_init(path); // initialize pages for storage
-    directory_init(); // init root directory
+    pages_init(path);                        // initialize pages for storage
+    directory_init();                        // init root directory
     s_block = (sp_block *)pages_get_page(0); // point to the beginning of superblock
     printf("storage_init(%s)\n", path);
 }
@@ -59,7 +59,7 @@ int storage_stat(const char *path, struct stat *st)
 int storage_read(const char *path, char *buf, size_t size, off_t offset)
 {
     int rv;
-    const char* data = storage_data(path);
+    const char *data = storage_data(path);
 
     rv = strlen(data);
     return rv;
@@ -82,12 +82,14 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset)
         return rv;
     }
     void *page_to_write = pages_get_page(node->ptrs[0]);
-    if (size + offset < PAGE_SIZE) {
+    if (size + offset < PAGE_SIZE)
+    {
         memcpy(page_to_write, buf, size);
         node->mtime = time(NULL);
         node->size = size; // more work needed
     }
-    else {
+    else
+    {
         return rv;
     }
 
@@ -114,15 +116,16 @@ int storage_truncate(const char *path, off_t size)
     }
     prev_size = node->size;
     node->size = size;
-    
-    // clear out other data / reevaluate 
+
+    // clear out other data / reevaluate
     if (prev_size < node->size)
     {
         // fill with \0 -- null bytes
         memset(prev_size + node, 0, node->size - prev_size);
-
-    } else {
-        // lost data ==> don't care what happends there or 
+    }
+    else
+    {
+        // lost data ==> don't care what happends there or
     }
     rv = 0; // success
     printf("storage_truncate(%s, %ld)\n", path, size);
@@ -134,7 +137,7 @@ int storage_mknod(const char *path, mode_t mode)
     // work around - got this from stackOverflow
     char *path1 = alloca(strlen(path));
     strcpy(path1, path);
-    char *par_dir = dirname(path1);  // parent directory
+    char *par_dir = dirname(path1); // parent directory
     directory dir = get_dir_path(par_dir);
     if (!dir.node) // no such directory
     {
@@ -142,15 +145,15 @@ int storage_mknod(const char *path, mode_t mode)
     }
 
     char *path2 = alloca(strlen(path));
-    strcpy(path2, path);    
-    char *cur_dir = basename(path2); // curent directory
+    strcpy(path2, path);
+    char *cur_dir = basename(path2);               // curent directory
     if (directory_lookup(dir, cur_dir) != -ENOENT) // file already exist
     {
         return -EEXIST;
     }
 
     int inum = pages_get_mt_nd();
-    if (inum < 0) 
+    if (inum < 0)
     {
         printf("All inodes are taken\n");
         return -1;
@@ -195,12 +198,13 @@ int storage_unlink(const char *path)
 
     inode *node = get_inode(inum);
 
-    if (node->refs == 1) {
+    if (node->refs == 1)
+    {
         int ii = 0;
-        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS) 
+        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS)
         {
             s_block->db_map[node->ptrs[ii]] = 0; // clear db_map
-            s_block->db_free_num += 1; // free up
+            s_block->db_free_num += 1;           // free up
             ++ii;
         }
         // clear node
@@ -212,7 +216,7 @@ int storage_unlink(const char *path)
         node->ctime = 0;
         node->mtime = 0;
         s_block->inodes_map[inum] = 0; //clear inodes
-        s_block->inodes_num += 1; // free up
+        s_block->inodes_num += 1;      // free up
     }
 
     rv = 0; //success
@@ -311,11 +315,11 @@ storage_data(const char *path)
         return NULL; // EMPTY first db
     }
     char *data = (char *)pages_get_page(pnum);
-    
+
     // For more than 4K
     // Fetch all the non empty pages the node points to
     // Concat them
-    
+
     // int ii = 0;
     // while (node->ptrs[ii] > 2 && ii < DIRECT_PTRS)
     // {
@@ -324,7 +328,6 @@ storage_data(const char *path)
     //     ++ii;
     // }
 
-    
     printf("storage_data(%s) -> %s\n", path, data);
     return data;
 }
@@ -368,7 +371,7 @@ int storage_mkdir(const char *path, mode_t mode)
     int pnum = pages_get_mt_pg();
     int inum = pages_get_mt_nd();
     inode *node = get_inode(inum);
-    mode_t dir_mode = (mode |= 040000);     // Compound bitwise OR
+    mode_t dir_mode = (mode |= 040000); // Compound bitwise OR
     printf("mkdir() = %d\n", dir_mode);
 
     init_inode(node, dir_mode);
@@ -393,19 +396,20 @@ int storage_rmdir(const char *path)
     int inum = rm_dir(path);
     if (inum <= 0)
     {
-        // might be caused by non empty / non existence 
+        // might be caused by non empty / non existence
         return rv;
     }
 
     inode *node = get_inode(inum);
-    
+
     // The only left --> delete
-    if (node->refs == 1) {
+    if (node->refs == 1)
+    {
         int ii = 0;
-        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS) 
+        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS)
         {
             s_block->db_map[node->ptrs[ii]] = 0; // clear db_map
-            s_block->db_free_num += 1; // free up
+            s_block->db_free_num += 1;           // free up
             ++ii;
         }
         // clear node
@@ -417,7 +421,7 @@ int storage_rmdir(const char *path)
         node->ctime = 0;
         node->mtime = 0;
         s_block->inodes_map[inum] = 0; //clear inodes
-        s_block->inodes_num += 1; // free up
+        s_block->inodes_num += 1;      // free up
     }
 
     rv = 0; // success
