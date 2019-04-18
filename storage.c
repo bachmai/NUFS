@@ -352,22 +352,17 @@ int storage_mkdir(const char *path, mode_t mode)
     char *par_dir = dirname(path1);
     char *cur_dir = basename(path2);
 
-    directory dir = get_dir_path(path1);
-    assert(dir.pnum > 0);
-
-    int pnum = pages_get_empty_pg();
-    assert(pnum > 0);
-
-    int inum = get_empty_node();
-    assert(inum > 0);
+    directory dir = get_dir_path(par_dir);
 
     // init pointers
+    int pnum = pages_get_empty_pg();
+    int inum = get_empty_node();
     inode *node = &(s_block->inodes_start[inum]);
     mode_t dir_mode = (mode |= 040000);
     init_inode(node, dir_mode);
     inode_set_ptrs(node, pnum, PAGE_SIZE);
 
-    // update superblock
+    // update superblock --> to taken 
     s_block->inodes_map[inum] = 1;
     s_block->db_map[pnum] = 1;
 
@@ -377,14 +372,17 @@ int storage_mkdir(const char *path, mode_t mode)
 
 int storage_rmdir(const char *path)
 {
+    int rv = -1;
+
     // cannot delete nonempty dir
     int inum = rm_dir(path);
     if (inum <= 0)
     {
-        return -1;
+        return rv;
     }
 
     inode *node = &(s_block->inodes_start[inum]);
+    // The only left --> delete
     if (node->refs == 1)
     {
         for (int ii = 0; ii < DIRECT_PTRS; ++ii)
@@ -392,28 +390,37 @@ int storage_rmdir(const char *path)
             int pnum = node->ptrs[ii];
             if (pnum > 2)
             {
+                // printf("db_map[pnum = %d] = $d\n", pnum, s_block->db_map[pnum]);
+                // printf("inode->ptrs[ii = %d] = %d\n", ii, node->ptrs[ii]);
                 s_block->db_map[pnum] = 0;
                 node->ptrs[ii] = 0;
+                // puts("DELETED -- remove all drct");
+                // printf("db_map[pnum = %d] = $d\n", pnum, s_block->db_map[pnum]);
+                // printf("inode->ptrs[ii = %d] = %d\n", ii, node->ptrs[ii]);
+
             }
         }
         node->size = 0;
         s_block->inodes_map[inum] = 0;
     }
+
+    rv = 0;     // success
     printf("storage_rmdir(%s)\n", path);
-    return 0;
+    return rv;
 }
 
 int storage_chmod(const char *path, mode_t mode)
 {
-    int inum = tree_lookup(path);
-    if (inum <= 0)
-    {
-        return -1;
-    }
+    int rv = -1;
 
-    inode *node = &(s_block->inodes_start[inum]);
+    inode *node = get_node_from_path(path);
+    if (!node) 
+    {
+        return rv;
+    }
     node->mode = mode;
 
+    rv = 0;     // success
     printf("storage_chmod(%s, %o)\n", path, mode);
-    return 0;
+    return rv;
 }

@@ -2,6 +2,7 @@
 #include <alloca.h>
 #include <libgen.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "slist.h"
 #include "pages.h"
@@ -182,41 +183,40 @@ int rm_dir(const char *path)
 
     int rv = -ENOENT;
     
-    char *tmp1 = alloca(strlen(path));
-    char *tmp2 = alloca(strlen(path));
-    strcpy(tmp1, path);
-    strcpy(tmp2, path);
+    char *path1 = alloca(strlen(path));
+    char *path2 = alloca(strlen(path));
+    strcpy(path1, path);
+    strcpy(path2, path);
+    char *par_dir = dirname(path1);
+    char *cur_dir = basename(path2);
 
-    char *dname = dirname(tmp1);
-    char *name = basename(tmp2);
-
-    int parent_inum = tree_lookup(dname);
-    if (parent_inum <= 0)
+    int p_inum = tree_lookup(par_dir);
+    if (p_inum <= 0)
     {
-        rv = parent_inum;
+        rv = p_inum;
         printf("rm_dir(%s) -> %d\n", path, rv);
         return rv;
     }
 
-    directory parent_dir = get_dir_inum(parent_inum);
-    dirent *child_ent = 0;
+    directory p_dir = get_dir_inum(p_inum);
+    dirent *c_ent = 0;
     for (int ii = 0; ii < DIR_LIMIT; ++ii)
     {
-        if (streq(parent_dir.dirents[ii].name, name))
+        if (streq(p_dir.dirents[ii].name, cur_dir))
         {
-            child_ent = &(parent_dir.dirents[ii]);
+            c_ent = &(p_dir.dirents[ii]);
             break;
         }
     }
 
-    if (child_ent == 0)
+    if (c_ent == 0)
     {
         printf("rm_dir(%s) -> %d\n", path, rv);
         return rv;
     }
 
-    directory child = get_dir_inum(child_ent->inum);
-    if (child.pnum == 0)
+    directory c_dir = get_dir_inum(c_ent->inum);
+    if (c_dir.pnum == 0)
     {
         printf("rm_dir(%s) -> %d\n", path, rv);
         return rv;
@@ -224,7 +224,7 @@ int rm_dir(const char *path)
 
     for (int ii = 0; ii < DIR_LIMIT; ++ii)
     {
-        if (child.dirents[ii].name[0] != 0)
+        if (c_dir.dirents[ii].name[0] != 0)
         {
             rv = -ENOTEMPTY;
             printf("rm_dir(%s) -> %d\n", path, rv);
@@ -232,12 +232,12 @@ int rm_dir(const char *path)
         }
     }
 
-    child.pnum = 0;
-    child.node = 0;
+    c_dir.pnum = 0;
+    c_dir.node = 0;
 
-    int inum = child_ent->inum;
-    child_ent->inum = 0;
-    child_ent->name[0] = 0;
+    int inum = c_ent->inum;
+    c_ent->inum = 0;
+    c_ent->name[0] = 0;
 
     rv = inum;
     printf("rm_dir(%s) -> %d\n", path, rv);
