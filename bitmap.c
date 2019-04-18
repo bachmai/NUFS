@@ -1,14 +1,22 @@
-int bitmap_get(void* bm, int ii) 
-{
-    return *((int*)bm + (ii/32)) & (1 << (ii%32));
-}
+#include <stdio.h>
 
-void bitmap_put(void* bm, int ii, int vv) 
-{
-    // TODO
-}
+#include "bitmap.h"
 
-void bitmap_print(void* bm, int size) 
+int bitmap_get(void *bm, int ii)
 {
-    // TODO
+    int *ptr = (int *)bm + ii;
+    return (*ptr);
+}
+void bitmap_put(void *bm, int ii, int vv)
+{
+    int *ptr = (int *)bm + ii;
+    (*ptr) = vv;
+}
+void bitmap_print(void *bm, int size)
+{
+    for (int ii = 0; ii < size; ++ii)
+    {
+        int *ptr = (int *)bm + ii;
+        printf("%d ", (*ptr));
+    }
 }

@@ -22,7 +22,7 @@
 static int pages_fd = -1;
 static void *pages_base = 0;
 
-static sp_block *s_block;   // Our superblock
+static sp_block *s_block; // Our superblock
 
 // Superblock : pg 0
 // inodes : pg 1
@@ -30,7 +30,7 @@ static sp_block *s_block;   // Our superblock
 
 void pages_init(const char *path)
 {
-    
+
     pages_fd = open(path, O_CREAT | O_RDWR, 0644);
     assert(pages_fd != -1);
 
@@ -40,36 +40,32 @@ void pages_init(const char *path)
     pages_base = mmap(0, NUFS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, pages_fd, 0);
     assert(pages_base != MAP_FAILED);
 
-    s_block = (sp_block*)pages_base;
-
-    // init the superblock
-    s_block->inodes_start = (inode *)pages_get_page(1);
-    s_block->inodes_num = PAGE_SIZE / sizeof(inode);
-    s_block->db_start = pages_get_page(2);  
-    s_block->db_free_num = PAGE_COUNT - 2;
-    s_block->inodes_map[0] = 1; // taken
-    s_block->db_map[0] = 1;     // taken
+    s_block = (sp_block *)pages_base;
+    // populate the superblock
+    init_superblock(s_block);
 
     printf("pages_init(%s) -> done\n", path);
 }
 
+// Find and returns the inum-th inode from superrblock
 inode *
 pages_get_node(int inum)
 {
-    printf("pages_get_node(%d)\n", inum);
+    // printf("pages_get_node(%d)\n", inum);
+    inode *rv = 0; // empty
     if (inum < s_block->inodes_num)
     {
         inode *node = &(s_block->inodes_start[inum]);
-        printf("pages_get_node(%d)\n -> success", inum);
-        return node;
+        printf("pages_get_node(%d)\n -> success\n", inum);
+        rv = node;
     }
-    return 0;
+    return rv;
 }
 
-int pages_get_empty_pg()
+int pages_get_mt_pg()
 {
     int rv = -1;
-    // Traverse through db
+    // Traverse through datablocks exclding root, inodes, root direct
     for (int ii = 2; ii < PAGE_COUNT; ++ii)
     {
         if (s_block->db_map[ii] == 0)
@@ -78,13 +74,24 @@ int pages_get_empty_pg()
             break;
         }
     }
-    printf("pages_get_empty_pg() -> %d\n", rv);
+    printf("pages_get_mt_pg() -> %d\n", rv);
     return rv;
 }
 
-void print_node(inode *node)
+int pages_get_mt_nd()
 {
-    print_inode(node);
+    int rv = -1;
+    // Traverse through pages excluding root, inodesm root direct
+    for (int ii = 2; ii < PAGE_COUNT; ++ii)
+    {
+        if (!s_block->inodes_map[ii])
+        {
+            rv = ii;
+            break;
+        }
+    }
+    printf("pages_get_mt_nd() -> %d\n", rv);
+    return rv;
 }
 
 void pages_free()
@@ -99,14 +106,12 @@ pages_get_page(int pnum)
     return pages_base + 4096 * pnum;
 }
 
-// Given but not use
 void *
 get_pages_bitmap()
 {
     return pages_get_page(0);
 }
 
-// Given but not used
 void *
 get_inode_bitmap()
 {
@@ -114,7 +119,6 @@ get_inode_bitmap()
     return (void *)(page + 32);
 }
 
-// given but not used
 int alloc_page()
 {
     void *pbm = get_pages_bitmap();
@@ -132,7 +136,6 @@ int alloc_page()
     return -1;
 }
 
-// given but not used
 void free_page(int pnum)
 {
     printf("+ free_page(%d)\n", pnum);

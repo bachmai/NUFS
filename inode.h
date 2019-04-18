@@ -10,25 +10,26 @@
 
 #define DIRECT_PTRS 8
 
-typedef struct inode {
-    int refs; // reference count
-    int mode; // permission & type
-    int size; // bytes
-    int ptrs[DIRECT_PTRS]; // direct pointers
-    int iptr; // single indirect pointer
-    time_t ctime; // created time
-    time_t mtime; // modified time
+// 4096 / 8 / 8 --> 64 for inode only
+typedef struct inode
+{
+    int refs;              // reference count
+    int mode;              // permission & type
+    int size;              // bytes
+    int ptrs[DIRECT_PTRS]; // direct pointers -->
+    int iptr;              // single indirect pointer
+    time_t ctime;          // changed time
+    time_t mtime;          // modified time
 } inode;
 
-void print_inode(inode* node);
-inode* get_inode(int inum);
+void print_inode(inode *node);
+inode *get_inode(int inum);
 int alloc_inode();
 void free_inode();
-int grow_inode(inode* node, int size);
-int shrink_inode(inode* node, int size);
-int inode_get_pnum(inode* node, int fpn);
-void init_inode(inode* node, int mode);
-void inode_set_ptrs(inode* node, int pnum, int data_size);
-int inode_write_helper(inode* node, const char* buf, size_t bytes, off_t offset);
+int grow_inode(inode *node, int size);
+int shrink_inode(inode *node, int size);
+int inode_get_pnum(inode *node, int fpn);
+void init_inode(inode *node, int mode);
+int get_mt_db(inode *node);
 
 #endif
