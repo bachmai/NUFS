@@ -71,13 +71,13 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset)
     inode *node = get_node_from_path(path);
     if (!node)
     {
-        printf("No such path exists");
+        printf("No such path exists\n");
         return rv;
     }
 
     if (size > PAGE_SIZE || node->ptrs[0] == 0)
     {
-        printf("Write more than a page? -- not possible yet || empty write?");
+        printf("Write more than a page? -- not possible yet || empty write?\n");
         printf("storage_write(%s, %s, %ld, %ld) -> %d\n", path, buf, size, offset, rv);
         return rv;
     }
@@ -101,7 +101,7 @@ int storage_truncate(const char *path, off_t size)
     int rv = -1;
     if (size > PAGE_SIZE)
     {
-        printf("truncate() -> size given is larger than page size");
+        printf("truncate() -> size given is larger than page size\n");
         return rv;
     }
 
@@ -152,7 +152,7 @@ int storage_mknod(const char *path, mode_t mode)
     int inum = pages_get_mt_nd();
     if (inum < 0) 
     {
-        printf("All inodes are taken");
+        printf("All inodes are taken\n");
         return -1;
     }
 
@@ -189,12 +189,11 @@ int storage_unlink(const char *path)
     int inum = directory_delete(p_dir, (const char *)cur_dir);
     if (inum == -ENOENT)
     {
-        printf("could not find dir to delete");
+        printf("could not find dir to delete\n");
         return rv;
     }
 
     inode *node = get_inode(inum);
-
 
     if (node->refs == 1) {
         int ii = 0;
@@ -216,22 +215,6 @@ int storage_unlink(const char *path)
         s_block->inodes_num += 1; // free up
     }
 
-    // // The only left --> delete
-    // if (node->refs == 1)
-    // {
-    //     for (int ii = 0; ii < DIRECT_PTRS; ++ii)
-    //     {
-    //         int pnum = node->ptrs[ii];
-    //         if (pnum > 2)
-    //         {
-    //             s_block->db_map[pnum] = 0;
-    //             node->ptrs[ii] = 0;
-    //         }
-    //     }
-    //     node->size = 0;
-    //     s_block->inodes_map[inum] = 0;
-    // }
-
     rv = 0; //success
     printf("storage_unlink(%s)\n", path);
     return rv;
@@ -243,22 +226,22 @@ int storage_link(const char *from, const char *to)
     inode *node = get_node_from_path(from);
     if (!node)
     {
+        printf("storage_link(%s) -> Node does not exist\n", from);
         return rv;
     }
     // walk around -- from StackOverflow
     char *path1 = alloca(strlen(to));
-    char *path2 = alloca(strlen(to));
     strcpy(path1, to);
-    strcpy(path2, to);
     char *par_dir = dirname(path1);
-    char *cur_dir = basename(path2);
-
     directory up_one_dir = get_dir_path(par_dir);
     if (up_one_dir.pnum <= 0)
     {
-        return up_one_dir.pnum;
+        return rv;
     }
 
+    char *path2 = alloca(strlen(to));
+    strcpy(path2, to);
+    char *cur_dir = basename(path2);
     rv = directory_put(up_one_dir, (const char *)cur_dir, tree_lookup(from));
     if (rv == 0) //success
     {
@@ -327,8 +310,21 @@ storage_data(const char *path)
     {
         return NULL; // EMPTY first db
     }
+    char *data = (char *)pages_get_page(pnum);
+    
+    // For more than 4K
+    // Fetch all the non empty pages the node points to
+    // Concat them
+    
+    // int ii = 0;
+    // while (node->ptrs[ii] > 2 && ii < DIRECT_PTRS)
+    // {
+    //     pnum = node->ptrs[ii];
+    //     data = strcat(data, (const char *)pages_get_page(pnum));
+    //     ++ii;
+    // }
 
-    const char *data = (const char *)pages_get_page(pnum);
+    
     printf("storage_data(%s) -> %s\n", path, data);
     return data;
 }
@@ -338,18 +334,18 @@ int storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 {
     directory dir = get_dir_path(path);
     struct stat st;
-    char path_temp[256];
+    char acc[256];
 
     for (int ii = 0; ii < DIR_LIMIT; ++ii)
     {
-        char *name = dir.dirents[ii].name;
-        if (name[0] != 0)
+        char *entry_name = dir.dirents[ii].name;
+        if (entry_name[0] != 0)
         {
-            strcpy(path_temp, path);
-            strcat(path_temp, name);
-
-            storage_stat(path_temp, &st);
-            filler(buf, name, &st, 0);
+            strcpy(acc, path);
+            strcat(acc, entry_name);
+            printf("The directory so far is %s\n", acc);
+            storage_stat(acc, &st);
+            filler(buf, entry_name, &st, 0);
         }
     }
     printf("storage_readdir(%s)\n", path);
@@ -358,20 +354,23 @@ int storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 int storage_mkdir(const char *path, mode_t mode)
 {
+    // Work around from StackOverflow
     char *path1 = alloca(strlen(path));
-    char *path2 = alloca(strlen(path));
     strcpy(path1, path);
-    strcpy(path2, path);
     char *par_dir = dirname(path1);
-    char *cur_dir = basename(path2);
-
     directory dir = get_dir_path(par_dir);
 
-    // init pointers
+    char *path2 = alloca(strlen(path));
+    strcpy(path2, path);
+    char *cur_dir = basename(path2);
+
+    // get empty page and node
     int pnum = pages_get_mt_pg();
     int inum = pages_get_mt_nd();
-    inode *node = &(s_block->inodes_start[inum]);
-    mode_t dir_mode = (mode |= 040000);
+    inode *node = get_inode(inum);
+    mode_t dir_mode = (mode |= 040000);     // Compound bitwise OR
+    printf("mkdir() = %d\n", dir_mode);
+
     init_inode(node, dir_mode);
     node->ptrs[get_mt_db(node)] = pnum;
     node->size += PAGE_SIZE;
@@ -379,6 +378,8 @@ int storage_mkdir(const char *path, mode_t mode)
     // update superblock --> to taken
     s_block->inodes_map[inum] = 1;
     s_block->db_map[pnum] = 1;
+    // s_block->inodes_num -=1;
+    // s_block->db_free_num -=1;
 
     printf("storage_mkdir(%s, %o)\n", path, mode);
     return directory_put(dir, cur_dir, inum);
@@ -388,33 +389,35 @@ int storage_rmdir(const char *path)
 {
     int rv = -1;
 
-    // cannot delete nonempty dir
+    // only allow removing empty directries as specified in man
     int inum = rm_dir(path);
     if (inum <= 0)
     {
+        // might be caused by non empty / non existence 
         return rv;
     }
 
-    inode *node = &(s_block->inodes_start[inum]);
+    inode *node = get_inode(inum);
+    
     // The only left --> delete
-    if (node->refs == 1)
-    {
-        for (int ii = 0; ii < DIRECT_PTRS; ++ii)
+    if (node->refs == 1) {
+        int ii = 0;
+        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS) 
         {
-            int pnum = node->ptrs[ii];
-            if (pnum > 2)
-            {
-                // printf("db_map[pnum = %d] = $d\n", pnum, s_block->db_map[pnum]);
-                // printf("inode->ptrs[ii = %d] = %d\n", ii, node->ptrs[ii]);
-                s_block->db_map[pnum] = 0;
-                node->ptrs[ii] = 0;
-                // puts("DELETED -- remove all drct");
-                // printf("db_map[pnum = %d] = $d\n", pnum, s_block->db_map[pnum]);
-                // printf("inode->ptrs[ii = %d] = %d\n", ii, node->ptrs[ii]);
-            }
+            s_block->db_map[node->ptrs[ii]] = 0; // clear db_map
+            s_block->db_free_num += 1; // free up
+            ++ii;
         }
+        // clear node
+        node->refs = 0;
+        node->mode = 0;
         node->size = 0;
-        s_block->inodes_map[inum] = 0;
+        node->ptrs[0] = 0;
+        node->iptr = 0;
+        node->ctime = 0;
+        node->mtime = 0;
+        s_block->inodes_map[inum] = 0; //clear inodes
+        s_block->inodes_num += 1; // free up
     }
 
     rv = 0; // success
