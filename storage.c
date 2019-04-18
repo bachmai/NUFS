@@ -23,7 +23,6 @@ void storage_init(const char *path)
 
     // superblock goes into 0th page
     s_block = (sp_block *)pages_get_page(0);
-    s_block->root_inode = 1; // root inode stored at 1st page
     s_block->inodes_map[1] = 1;
 
     // init root directory
@@ -157,18 +156,16 @@ int storage_mknod(const char *path, mode_t mode)
         return -EEXIST;
     }
 
-    int pnum = pages_get_empty_pg();
-    assert(pnum > 2);
-
     int inum = get_empty_node();
     assert(inum > 1);
 
     inode *node = pages_get_node(inum);
+    int mt_page = pages_get_mt_pg();
     init_inode(node, mode);
-    node->ptrs[get_mt_db(node)] = pnum;
+    node->ptrs[get_mt_db(node)] = mt_page;
 
     // update superblock
-    s_block->db_map[pnum] = 1;
+    s_block->db_map[mt_page] = 1;
     s_block->inodes_map[inum] = 1;
     s_block->inodes_start[inum] = *(node);
 
@@ -354,7 +351,7 @@ int storage_mkdir(const char *path, mode_t mode)
     directory dir = get_dir_path(par_dir);
 
     // init pointers
-    int pnum = pages_get_empty_pg();
+    int pnum = pages_get_mt_pg();
     int inum = get_empty_node();
     inode *node = &(s_block->inodes_start[inum]);
     mode_t dir_mode = (mode |= 040000);

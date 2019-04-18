@@ -15,4 +15,7 @@ typedef struct super_block
     int root_inode;
 } sp_block;
 
+// Polute the superblock
+void init_superblock(sp_block *s_block);
+
 #endif

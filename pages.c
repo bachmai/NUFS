@@ -20,7 +20,7 @@
 #include "superblock.h"
 
 static int pages_fd = -1;
-static void *pages_base = 0;
+static void* pages_base = 0;
 
 static sp_block *s_block; // Our superblock
 
@@ -41,14 +41,8 @@ void pages_init(const char *path)
     assert(pages_base != MAP_FAILED);
 
     s_block = (sp_block *)pages_base;
-
-    // init the superblock
-    s_block->inodes_start = (inode *)pages_get_page(1);
-    s_block->inodes_num = PAGE_SIZE / sizeof(inode);
-    s_block->db_start = pages_get_page(2);
-    s_block->db_free_num = PAGE_COUNT - 2;
-    s_block->inodes_map[0] = 1; // taken
-    s_block->db_map[0] = 1;     // taken
+    // populate the superblock
+    init_superblock(s_block);
 
     printf("pages_init(%s) -> done\n", path);
 }
@@ -68,10 +62,10 @@ pages_get_node(int inum)
     return rv;
 }
 
-int pages_get_empty_pg()
+int pages_get_mt_pg()
 {
     int rv = -1;
-    // Traverse through db
+    // Traverse through datablocks exclding root, inodes, root direct
     for (int ii = 2; ii < PAGE_COUNT; ++ii)
     {
         if (s_block->db_map[ii] == 0)
@@ -80,7 +74,7 @@ int pages_get_empty_pg()
             break;
         }
     }
-    printf("pages_get_empty_pg() -> %d\n", rv);
+    printf("pages_get_mt_pg() -> %d\n", rv);
     return rv;
 }
 

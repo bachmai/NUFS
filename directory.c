@@ -41,7 +41,7 @@ void directory_init()
         root_node->mtime = time(NULL);
     }
     // else {
-    //     root_node->ptrs[0] = pages_get_empty_pg; // reinitialize db?
+    //     root_node->ptrs[0] = pages_get_mt_pg; // reinitialize db?
     //     root_node->ctime = time(NULL);
     //     root_node->mtime = time(NULL);
     // }

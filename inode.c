@@ -50,6 +50,13 @@ get_mt_db(inode *node) {
     return -1;
 }
 
+inode* 
+get_inode(int inum)
+{
+    return pages_get_node(inum);
+}
+
+// for testing
 void print_inode(inode *node)
 {
     if (!node)

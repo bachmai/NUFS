@@ -20,6 +20,6 @@ void *get_inode_bitmap();
 int alloc_page();
 void free_page(int pnum);
 inode *pages_get_node(int inum);
-int pages_get_empty_pg();
+int pages_get_mt_pg();
 
 #endif
