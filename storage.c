@@ -65,7 +65,7 @@ int storage_stat(const char *path, struct stat *st)
 int get_empty_node()
 {
     int rv = -1;
-    for (int ii = 2; ii < PAGE_COUNT; ii++)
+    for (int ii = 2; ii < PAGE_COUNT; ++ii)
     {
         if (!s_block->inodes_map[ii])
         {

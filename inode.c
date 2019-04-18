@@ -27,7 +27,7 @@ void init_inode(inode *node, int mode)
 {
     node->refs = 1;
     node->mode = mode;
-    for (int ii = 0; ii < DIRECT_PTRS; ii++)
+    for (int ii = 0; ii < DIRECT_PTRS; ++ii)
     {
         node->ptrs[ii] = 0;
     }
@@ -41,7 +41,7 @@ void init_inode(inode *node, int mode)
 void inode_set_ptrs(inode *node, int pnum, int data_size)
 {
 
-    for (int ii = 0; ii < DIRECT_PTRS; ii++)
+    for (int ii = 0; ii < DIRECT_PTRS; ++ii)
     {
         if (node->ptrs[ii] == 0)
         {
