@@ -20,14 +20,8 @@ static sp_block *s_block = NULL;
 void storage_init(const char *path)
 {
     pages_init(path); // initialize pages for storage
-
-    // superblock goes into 0th page
-    s_block = (sp_block *)pages_get_page(0);
-    s_block->inodes_map[1] = 1;
-
-    // init root directory
-    directory_init();
-    s_block->db_map[2] = 1; // data_blocks start at page 2
+    directory_init(); // init root directory
+    s_block = (sp_block *)pages_get_page(0); // point to the beginning of superblock
     printf("storage_init(%s)\n", path);
 }
 
@@ -49,6 +43,8 @@ int storage_stat(const char *path, struct stat *st)
     inode *node = get_node_from_path(path);
     if (!node)
     {
+        printf("storage_stat(%s)\n", path);
+        //printf("returning -ENOENT because given path does not exist!");
         return -ENOENT;
     }
     st->st_size = node->size;
@@ -57,21 +53,6 @@ int storage_stat(const char *path, struct stat *st)
     st->st_mtime = node->mtime;
     printf("storage_stat(%s)\n", path);
     return 0;
-}
-
-// returns the first empty inode index if any
-int get_empty_node()
-{
-    int rv = -1;
-    for (int ii = 2; ii < PAGE_COUNT; ++ii)
-    {
-        if (!s_block->inodes_map[ii])
-        {
-            rv = ii;
-            break;
-        }
-    }
-    return rv;
 }
 
 int storage_read(const char *path, char *buf, size_t size, off_t offset)
@@ -156,7 +137,7 @@ int storage_mknod(const char *path, mode_t mode)
         return -EEXIST;
     }
 
-    int inum = get_empty_node();
+    int inum = pages_get_mt_nd();
     assert(inum > 1);
 
     inode *node = pages_get_node(inum);
@@ -352,7 +333,7 @@ int storage_mkdir(const char *path, mode_t mode)
 
     // init pointers
     int pnum = pages_get_mt_pg();
-    int inum = get_empty_node();
+    int inum = pages_get_mt_nd();
     inode *node = &(s_block->inodes_start[inum]);
     mode_t dir_mode = (mode |= 040000);
     init_inode(node, dir_mode);

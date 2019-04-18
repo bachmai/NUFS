@@ -21,5 +21,6 @@ int alloc_page();
 void free_page(int pnum);
 inode *pages_get_node(int inum);
 int pages_get_mt_pg();
+int pages_get_mt_nd();
 
 #endif

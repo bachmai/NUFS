@@ -78,6 +78,22 @@ int pages_get_mt_pg()
     return rv;
 }
 
+int pages_get_mt_nd()
+{
+    int rv = -1;
+    // Traverse through pages excluding root, inodesm root direct
+    for (int ii = 2; ii < PAGE_COUNT; ++ii)
+    {
+        if (!s_block->inodes_map[ii])
+        {
+            rv = ii;
+            break;
+        }
+    }
+    printf("pages_get_mt_nd() -> %d\n", rv);
+    return rv;
+}
+
 void pages_free()
 {
     int rv = munmap(pages_base, NUFS_SIZE);
