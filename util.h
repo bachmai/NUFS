@@ -6,7 +6,7 @@
 #include <string.h>
 
 static int
-streq(const char* aa, const char* bb)
+streq(const char *aa, const char *bb)
 {
     return strcmp(aa, bb) == 0;
 }
@@ -34,24 +34,25 @@ bytes_to_pages(int bytes)
 {
     int quo = bytes / 4096;
     int rem = bytes % 4096;
-    if (rem == 0) {
+    if (rem == 0)
+    {
         return quo;
     }
-    else {
+    else
+    {
         return quo + 1;
     }
 }
 
 static void
-join_to_path(char* buf, char* item)
+join_to_path(char *buf, char *item)
 {
     int nn = strlen(buf);
-    if (buf[nn - 1] != '/') {
+    if (buf[nn - 1] != '/')
+    {
         strcat(buf, "/");
     }
     strcat(buf, item);
 }
-
-
 
 #endif

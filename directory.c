@@ -25,11 +25,11 @@
 
 static int root_dir = 1; // Root dir inode
 
-// Initialize directory 
+// Initialize directory
 void directory_init()
 {
-    inode *root_node = pages_get_node(root_dir); // get the root inode 
-    
+    inode *root_node = pages_get_node(root_dir); // get the root inode
+
     // Root directory initialized?
     if (root_node->refs == 0)
     {
@@ -77,7 +77,7 @@ int tree_lookup(const char *path)
     while (dirs != 0)
     {
         printf("in loop, dirs->data: %s\n", dirs->data);
-        found_flag = false;
+        found_flag = 0;
         for (int ii = 0; ii < DIR_LIMIT; ++ii)
         {
             if (streq(dd.dirents[ii].name, dirs->data))
@@ -88,7 +88,7 @@ int tree_lookup(const char *path)
                 {
                     dd = get_dir_inum(inum);
                 }
-                found_flag = true;
+                found_flag = 1;
                 break;
             }
         }
@@ -182,7 +182,7 @@ int rm_dir(const char *path)
 {
 
     int rv = -ENOENT;
-    
+
     char *path1 = alloca(strlen(path));
     char *path2 = alloca(strlen(path));
     strcpy(path1, path);
