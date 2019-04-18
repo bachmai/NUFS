@@ -55,20 +55,13 @@ int storage_stat(const char *path, struct stat *st)
     return 0;
 }
 
+//
 int storage_read(const char *path, char *buf, size_t size, off_t offset)
 {
-    int rv = -1;
-    inode *node = get_node_from_path(path);
+    int rv;
+    const char* data = storage_data(path);
 
-    if (!node)
-    {
-        return rv;
-    }
-    void *page = pages_get_page(0);
-
-    rv = clamp(node->size - offset, 0, size); // bytes read max possible
-    memcpy(page + offset, buf, rv);
-    printf("storage_read(%s) -> %d\n", path, rv);
+    rv = strlen(data);
     return rv;
 }
 
@@ -78,18 +71,25 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset)
     inode *node = get_node_from_path(path);
     if (!node)
     {
+        printf("No such path exists");
         return rv;
     }
 
     if (size > PAGE_SIZE || node->ptrs[0] == 0)
     {
+        printf("Write more than a page? -- not possible yet || empty write?");
         printf("storage_write(%s, %s, %ld, %ld) -> %d\n", path, buf, size, offset, rv);
         return rv;
     }
     void *page_to_write = pages_get_page(node->ptrs[0]);
-    memcpy(page_to_write, buf, size);
-    node->mtime = time(NULL);
-    node->size = size;
+    if (size + offset < PAGE_SIZE) {
+        memcpy(page_to_write, buf, size);
+        node->mtime = time(NULL);
+        node->size = size; // more work needed
+    }
+    else {
+        return rv;
+    }
 
     rv = size;
     printf("storage_write(%s, %s, %ld, %ld) -> %d\n", path, buf, size, offset, rv);
@@ -101,16 +101,29 @@ int storage_truncate(const char *path, off_t size)
     int rv = -1;
     if (size > PAGE_SIZE)
     {
+        printf("truncate() -> size given is larger than page size");
         return rv;
     }
+
+    int prev_size;
 
     inode *node = get_node_from_path(path);
     if (!node)
     {
         return rv;
     }
+    prev_size = node->size;
     node->size = size;
+    
+    // clear out other data / reevaluate 
+    if (prev_size < node->size)
+    {
+        // fill with \0 -- null bytes
+        memset(prev_size + node, 0, node->size - prev_size);
 
+    } else {
+        // lost data ==> don't care what happends there or 
+    }
     rv = 0; // success
     printf("storage_truncate(%s, %ld)\n", path, size);
     return rv;
@@ -120,35 +133,40 @@ int storage_mknod(const char *path, mode_t mode)
 {
     // work around - got this from stackOverflow
     char *path1 = alloca(strlen(path));
-    char *path2 = alloca(strlen(path));
     strcpy(path1, path);
-    strcpy(path2, path);
     char *par_dir = dirname(path1);  // parent directory
-    char *cur_dir = basename(path2); // curent directory
-
     directory dir = get_dir_path(par_dir);
     if (!dir.node) // no such directory
     {
         return -ENOENT;
     }
 
+    char *path2 = alloca(strlen(path));
+    strcpy(path2, path);    
+    char *cur_dir = basename(path2); // curent directory
     if (directory_lookup(dir, cur_dir) != -ENOENT) // file already exist
     {
         return -EEXIST;
     }
 
     int inum = pages_get_mt_nd();
-    assert(inum > 1);
+    if (inum < 0) 
+    {
+        printf("All inodes are taken");
+        return -1;
+    }
 
     inode *node = pages_get_node(inum);
     int mt_page = pages_get_mt_pg();
     init_inode(node, mode);
-    node->ptrs[get_mt_db(node)] = mt_page;
+    node->ptrs[get_mt_db(node)] = mt_page; // point to right db (empty one)
 
     // update superblock
     s_block->db_map[mt_page] = 1;
     s_block->inodes_map[inum] = 1;
     s_block->inodes_start[inum] = *(node);
+    //s_block->db_free_num -= 1;
+    //s_block->inodes_num -= 1;
 
     printf("storage_mknod(%s, %o)\n", path, mode);
     return directory_put(dir, cur_dir, inum);
@@ -156,44 +174,63 @@ int storage_mknod(const char *path, mode_t mode)
 
 int storage_unlink(const char *path)
 {
+    int rv = -1;
+
+    // work around -- StOv
     char *path1 = alloca(strlen(path));
-    char *path2 = alloca(strlen(path));
     strcpy(path1, path);
-    strcpy(path2, path);
     char *par_dir = dirname(path1);
+    directory p_dir = get_dir_path(par_dir);
+
+    char *path2 = alloca(strlen(path));
+    strcpy(path2, path);
     char *cur_dir = basename(path2);
 
-    int rv = -1;
-    int p_index = tree_lookup(par_dir);
-    if (p_index <= 0)
-    {
-        return rv;
-    }
-
-    directory p_dir = get_dir_inum(p_index);
     int inum = directory_delete(p_dir, (const char *)cur_dir);
     if (inum == -ENOENT)
     {
+        printf("could not find dir to delete");
         return rv;
     }
 
-    inode *node = &(s_block->inodes_start[inum]);
+    inode *node = get_inode(inum);
 
-    // The only left --> delete
-    if (node->refs == 1)
-    {
-        for (int ii = 0; ii < DIRECT_PTRS; ++ii)
+
+    if (node->refs == 1) {
+        int ii = 0;
+        while (node->ptrs[ii] > 2 && node->ptrs[ii] != 0 && ii < DIRECT_PTRS) 
         {
-            int pnum = node->ptrs[ii];
-            if (pnum > 2)
-            {
-                s_block->db_map[pnum] = 0;
-                node->ptrs[ii] = 0;
-            }
+            s_block->db_map[node->ptrs[ii]] = 0; // clear db_map
+            s_block->db_free_num += 1; // free up
+            ++ii;
         }
+        // clear node
+        node->refs = 0;
+        node->mode = 0;
         node->size = 0;
-        s_block->inodes_map[inum] = 0;
+        node->ptrs[0] = 0;
+        node->iptr = 0;
+        node->ctime = 0;
+        node->mtime = 0;
+        s_block->inodes_map[inum] = 0; //clear inodes
+        s_block->inodes_num += 1; // free up
     }
+
+    // // The only left --> delete
+    // if (node->refs == 1)
+    // {
+    //     for (int ii = 0; ii < DIRECT_PTRS; ++ii)
+    //     {
+    //         int pnum = node->ptrs[ii];
+    //         if (pnum > 2)
+    //         {
+    //             s_block->db_map[pnum] = 0;
+    //             node->ptrs[ii] = 0;
+    //         }
+    //     }
+    //     node->size = 0;
+    //     s_block->inodes_map[inum] = 0;
+    // }
 
     rv = 0; //success
     printf("storage_unlink(%s)\n", path);
@@ -247,7 +284,6 @@ int storage_rename(const char *from, const char *to)
 int storage_set_time(const char *path, const struct timespec ts[2])
 {
     int rv = -1;
-
     inode *node = get_node_from_path(path);
     if (!node)
     {

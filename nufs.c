@@ -140,6 +140,7 @@ int nufs_read(const char *path, char *buf, size_t size, off_t offset, struct fus
         rv = size;
     }
     printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
+    // strlcpy for concat -- ?
     strncpy(buf, data, rv); // no more than rv
     return rv;
 }
