@@ -30,6 +30,6 @@ int grow_inode(inode *node, int size);
 int shrink_inode(inode *node, int size);
 int inode_get_pnum(inode *node, int fpn);
 void init_inode(inode *node, int mode);
-void inode_set_ptrs(inode *node, int pnum, int data_size);
+int get_mt_db(inode *node);
 
 #endif

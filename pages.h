@@ -13,14 +13,13 @@
 #include "inode.h"
 
 void pages_init(const char *path);
-inode *pages_get_node(int inum);
-int pages_get_empty_pg();
-void print_node(inode *node);
-void *pages_get_page(int pnum);
 void pages_free();
+void *pages_get_page(int pnum);
 void *get_pages_bitmap();
 void *get_inode_bitmap();
 int alloc_page();
 void free_page(int pnum);
+inode *pages_get_node(int inum);
+int pages_get_empty_pg();
 
 #endif

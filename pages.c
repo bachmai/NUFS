@@ -84,11 +84,6 @@ int pages_get_empty_pg()
     return rv;
 }
 
-void print_node(inode *node)
-{
-    print_inode(node);
-}
-
 void pages_free()
 {
     int rv = munmap(pages_base, NUFS_SIZE);

@@ -48,7 +48,6 @@ get_node_from_path(const char *path)
 int storage_stat(const char *path, struct stat *st)
 {
     inode *node = get_node_from_path(path);
-    print_node(node);
     if (!node)
     {
         return -ENOENT;
@@ -166,7 +165,7 @@ int storage_mknod(const char *path, mode_t mode)
 
     inode *node = pages_get_node(inum);
     init_inode(node, mode);
-    inode_set_ptrs(node, pnum, 0);
+    node->ptrs[get_mt_db(node)] = pnum;
 
     // update superblock
     s_block->db_map[pnum] = 1;
@@ -360,7 +359,8 @@ int storage_mkdir(const char *path, mode_t mode)
     inode *node = &(s_block->inodes_start[inum]);
     mode_t dir_mode = (mode |= 040000);
     init_inode(node, dir_mode);
-    inode_set_ptrs(node, pnum, PAGE_SIZE);
+    node->ptrs[get_mt_db(node)] = pnum;
+    node->size += PAGE_SIZE;
 
     // update superblock --> to taken
     s_block->inodes_map[inum] = 1;

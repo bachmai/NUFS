@@ -11,7 +11,7 @@
 //     int size; // bytes
 //     int ptrs[DIRECT_PTRS]; // direct pointers
 //     int iptr; // single indirect pointer
-//     time_t ctime; // created time
+//     time_t ctime; // changed time
 //     time_t mtime; // modified time
 // } inode;
 
@@ -27,30 +27,27 @@ void init_inode(inode *node, int mode)
 {
     node->refs = 1;
     node->mode = mode;
-    for (int ii = 0; ii < DIRECT_PTRS; ++ii)
-    {
-        node->ptrs[ii] = 0;
-    }
-    node->iptr = 0;
     node->size = 0;
+    node->ptrs[0] = 0;
+    node->iptr = 0;
     node->ctime = time(NULL); // set time to current
     node->mtime = time(NULL);
     printf("init_inode(node, %o)\n", mode);
 }
 
-void inode_set_ptrs(inode *node, int pnum, int data_size)
-{
-
+// Get the pnum of empty datablock pointed by inode
+// --> no more pages ?
+int 
+get_mt_db(inode *node) {
     for (int ii = 0; ii < DIRECT_PTRS; ++ii)
     {
-        if (node->ptrs[ii] == 0)
+        if (node->ptrs[ii] == 0)    // empty
         {
-            node->ptrs[ii] = pnum;
-            break;
+            return ii;
         }
     }
-    node->size += data_size;
-    printf("inode_set_ptrs(node, %d, %d)n", pnum, data_size);
+    // No more available pages --
+    return -1;
 }
 
 void print_inode(inode *node)
