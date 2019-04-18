@@ -53,31 +53,11 @@ void inode_set_ptrs(inode *node, int pnum, int data_size)
     printf("inode_set_ptrs(node, %d, %d)n", pnum, data_size);
 }
 
-int inode_write_helper(inode *node, const char *buf, size_t bytes, off_t offset)
-{
-    int rv = -1;
-
-    // TODO
-    if (bytes > PAGE_SIZE || node->ptrs[0] == 0)
-    {
-        printf("inode_write_helper(%s, %ld, %ld) -> %d\n", buf, bytes, offset, rv);
-        return rv;
-    }
-
-    memcpy(pages_get_page(node->ptrs[0]), buf, bytes);
-    node->mtime = time(NULL);
-    node->size = bytes; // offset?
-
-    rv = bytes;
-    printf("inode_write_helper(%s, %ld, %ld) -> %d\n", buf, bytes, offset, rv);
-    return rv;
-}
-
 void print_inode(inode *node)
 {
     if (!node)
     {
-        printf("given node is null\n");
+        printf("orint_node -> null\n");
     }
     else
     {

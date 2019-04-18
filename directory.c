@@ -24,9 +24,12 @@
 
 static int root_dir = 1; // Root dir inode
 
+// Initialize directory 
 void directory_init()
 {
-    inode *root_node = pages_get_node(root_dir);
+    inode *root_node = pages_get_node(root_dir); // get the root inode 
+    
+    // Root directory initialized?
     if (root_node->refs == 0)
     {
         init_inode(root_node, 040755);
@@ -101,8 +104,6 @@ int tree_lookup(const char *path)
 
     return rv;
 }
-
-// void print_directory(directory dd);
 
 int directory_put(directory dd, const char *name, int inum)
 {

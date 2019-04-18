@@ -29,6 +29,5 @@ int shrink_inode(inode* node, int size);
 int inode_get_pnum(inode* node, int fpn);
 void init_inode(inode* node, int mode);
 void inode_set_ptrs(inode* node, int pnum, int data_size);
-int inode_write_helper(inode* node, const char* buf, size_t bytes, off_t offset);
 
 #endif

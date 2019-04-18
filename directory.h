@@ -9,7 +9,6 @@
 
 #include "slist.h"
 #include "pages.h"
-// #include "inode.h"
 
 typedef struct dirent
 {
@@ -21,8 +20,8 @@ typedef struct dirent
 typedef struct directory
 {
     int pnum;
-    inode *node;
-    dirent *dirents;
+    inode *node;            // pointer to inode of this directory
+    dirent *dirents;        // pointer to dirent of this directory
 } directory;
 
 void directory_init();
