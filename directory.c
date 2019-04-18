@@ -168,8 +168,8 @@ directory get_dir_path(const char *path)
     int inum = tree_lookup(path);
     if (inum == -ENOENT)
     {
-        directory dd; // TODO: change this return
-        return dd;
+        directory empty; // TODO: change this return
+        return empty;
     }
 
     printf("get_dir_path(%s)\n", path);

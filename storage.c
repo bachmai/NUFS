@@ -186,22 +186,23 @@ int storage_unlink(const char *path)
     char *par_dir = dirname(path1);
     char *cur_dir = basename(path2);
 
+    int rv = -1;
     int p_index = tree_lookup(par_dir);
     if (p_index <= 0)
     {
-        return -1;
+        return rv;
     }
 
     directory p_dir = get_dir_inum(p_index);
     int inum = directory_delete(p_dir, (const char *)cur_dir);
-    if (inum <= 0)
+    if (inum == -ENOENT)
     {
-        return -1;
+        return rv;
     }
 
     inode *node = &(s_block->inodes_start[inum]);
 
-    // FIXME. if refs == 1 clear all links
+    // The only left --> delete
     if (node->refs == 1)
     {
         for (int ii = 0; ii < DIRECT_PTRS; ++ii)
@@ -216,21 +217,21 @@ int storage_unlink(const char *path)
         node->size = 0;
         s_block->inodes_map[inum] = 0;
     }
+
+    rv = 0; //success
     printf("storage_unlink(%s)\n", path);
-    return 0;
+    return rv;
 }
 
 int storage_link(const char *from, const char *to)
 {
-
-    int inum = tree_lookup(from);
-    if (inum <= 0)
+    int rv = -1;
+    inode *node = get_node_from_path(from);
+    if (!node)
     {
-        return -1;
+        return rv;
     }
-
-    inode *node = &(s_block->inodes_start[inum]);
-
+    // walk around -- from StackOverflow
     char *path1 = alloca(strlen(to));
     char *path2 = alloca(strlen(to));
     strcpy(path1, to);
@@ -244,65 +245,79 @@ int storage_link(const char *from, const char *to)
         return up_one_dir.pnum;
     }
 
-    int linked = directory_put(up_one_dir, (const char *)cur_dir, inum);
-    if (linked == 0)
+    rv = directory_put(up_one_dir, (const char *)cur_dir, tree_lookup(from));
+    if (rv == 0) //success
     {
         node->refs += 1;
     }
 
     printf("storage_link(%s, %s)\n", from, to);
-    return linked;
+    return rv;
 }
 
 int storage_rename(const char *from, const char *to)
 {
-    if (storage_link(from, to) < 0)
+    int rv = storage_link(from, to);
+    if (rv == 0)        // success
     {
-        return -1;
+        rv = storage_unlink(from);
     }
 
     printf("storage_rename(%s, %s)\n", from, to);
-    return storage_unlink(from);
+    return rv;
 }
 
 int storage_set_time(const char *path, const struct timespec ts[2])
 {
-    int inum = tree_lookup(path);
-    if (inum <= 0)
-    {
-        return -1;
-    }
+    int rv = -1;
 
-    inode *node = &(s_block->inodes_start[inum]);
+    inode *node = get_node_from_path(path);
+    if (!node)
+    {
+        return rv;
+    }
     node->ctime = ts[0].tv_sec;
     node->mtime = ts[1].tv_sec;
 
+    rv = 0; // success
     printf("storage_set_time(%s)\n", path);
-    return 0;
+    return rv;
 }
 
+// get data from db
 const char *
 storage_data(const char *path)
 {
     inode *node = get_node_from_path(path);
     if (!node)
     {
-        return 0;
+        return NULL;        // no node found
     }
 
-    for (int ii = 0; ii < DIRECT_PTRS; ++ii)
+    // char* data = 0;
+    // for (int ii = 0; ii < DIRECT_PTRS; ++ii)
+    // {
+    //     int pnum = node->ptrs[ii];
+    //     if (pnum == 0)
+    //     {
+    //         break;
+    //     }
+
+    //     data = strcat(data, (const char *)pages_get_page(pnum));
+    //     printf("storage_data(%s) -> %s\n", path, data);
+    //     // return data;
+    // }
+    // return (const char*)data;
+
+    int pnum = node->ptrs[0];
+    if (pnum == 0)
     {
-        int pnum = node->ptrs[ii];
-        if (pnum == 0)
-        {
-            return 0;
-        }
-
-        // TODO
-        const char *data = (const char *)pages_get_page(pnum);
-        printf("storage_data(%s) -> %s\n", path, data);
-        return data;
+        return NULL;    // EMPTY first db
     }
+
+    const char *data = (const char *)pages_get_page(pnum);
+    printf("storage_data(%s) -> %s\n", path, data);
+    return data;
 }
 
 int storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
@@ -325,7 +340,6 @@ int storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         }
     }
     printf("storage_readdir(%s)\n", path);
-
     return 0;
 }
 
