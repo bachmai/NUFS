@@ -10,14 +10,15 @@
 
 #define DIRECT_PTRS 8
 
+// 4096 / 8 / 8 --> 64 for inode only
 typedef struct inode
 {
     int refs;              // reference count
     int mode;              // permission & type
     int size;              // bytes
-    int ptrs[DIRECT_PTRS]; // direct pointers
+    int ptrs[DIRECT_PTRS]; // direct pointers --> 
     int iptr;              // single indirect pointer
-    time_t ctime;          // created time
+    time_t ctime;          // changed time
     time_t mtime;          // modified time
 } inode;
 

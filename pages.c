@@ -53,12 +53,12 @@ void pages_init(const char *path)
     printf("pages_init(%s) -> done\n", path);
 }
 
-// Find and returns the inum-th inode
+// Find and returns the inum-th inode from superrblock
 inode *
 pages_get_node(int inum)
 {
     // printf("pages_get_node(%d)\n", inum);
-    inode *rv = 0;
+    inode *rv = 0;  // empty
     if (inum < s_block->inodes_num)
     {
         inode *node = &(s_block->inodes_start[inum]);

@@ -32,7 +32,7 @@ void storage_init(const char *path)
     printf("storage_init(%s)\n", path);
 }
 
-// helper that returns the inode related to given path
+// helper that returns the inode of given path
 static inode *
 get_node_from_path(const char *path)
 {
